@@ -1,0 +1,69 @@
+# ============================================
+# GEMINI CLI NOTION EXTENSION - GITIGNORE
+# ============================================
+
+# Dependencies
+node_modules/
+
+# Build output (TypeScript compilation)
+dist/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+!gemini-extension.json
+*.tsbuildinfo
+
+# Environment variables - NEVER COMMIT SECRETS
+.env
+.env.*
+!.env.example
+
+# Local configuration and cache
+.local/
+.notion-cache.json
+*.log
+npm-debug.log*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============================================
+# PRIVATE FILES - NEVER COMMIT TO PUBLIC REPO
+# ============================================
+# These folders contain personal research, notes,
+# and development files that should stay local.
+
+research/
+support/
+docs/dev/
+*.private.*
+*-private.*
+notes.md
+TODO.md
+scratch/
+temp/
+tmp/
+
+# Test outputs
+coverage/
+.nyc_output/
+test-results/
+
+# Backup files
+*.bak
+*.backup
+*.old
+

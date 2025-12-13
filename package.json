@@ -1,0 +1,50 @@
+{
+  "name": "gemini-notion-extension",
+  "version": "2.0.0",
+  "description": "Full-featured Notion integration for Gemini CLI - manage pages, databases, blocks, comments, and more",
+  "main": "dist/server.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "gemini",
+    "gemini-cli",
+    "notion",
+    "notion-api",
+    "mcp",
+    "model-context-protocol",
+    "cli-extension",
+    "productivity",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/gemini-notion-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/gemini-notion-extension/issues"
+  },
+  "homepage": "https://github.com/yourusername/gemini-notion-extension#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}

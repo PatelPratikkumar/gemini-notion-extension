@@ -1,0 +1,46 @@
+{
+  "name": "notion-sync",
+  "displayName": "Notion Sync Extension",
+  "description": "Export Gemini conversations and manage projects in Notion",
+  "version": "1.0.0",
+  "author": "",
+  "mcpServers": [
+    {
+      "id": "notion-connector",
+      "name": "Notion Connector",
+      "command": "node",
+      "args": ["./dist/server.js"],
+      "env": {
+        "NOTION_API_KEY": "${NOTION_API_KEY}",
+        "NOTION_CONVERSATION_DB": "${NOTION_CONVERSATION_DB}",
+        "NOTION_PROJECT_DB": "${NOTION_PROJECT_DB}"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "name": "export-conversation",
+      "description": "Export current Gemini conversation to Notion",
+      "prompt": "Export this conversation to my Notion workspace",
+      "requiresConfirmation": false
+    },
+    {
+      "name": "save-to-project",
+      "description": "Associate conversation with a project",
+      "prompt": "Save this conversation reference to project {projectName}",
+      "requiresConfirmation": true
+    },
+    {
+      "name": "list-projects",
+      "description": "List all projects in Notion",
+      "prompt": "Show me all my ongoing projects from Notion",
+      "requiresConfirmation": false
+    },
+    {
+      "name": "sync-project-data",
+      "description": "Sync project data from Notion",
+      "prompt": "Retrieve detailed information about project {projectName}",
+      "requiresConfirmation": false
+    }
+  ]
+}

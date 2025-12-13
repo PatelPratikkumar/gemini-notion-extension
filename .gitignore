@@ -6,12 +6,7 @@
 node_modules/
 
 # Build output (TypeScript compilation)
-dist/
-*.js
-*.js.map
-*.d.ts
-*.d.ts.map
-!gemini-extension.json
+# NOTE: dist/ is INCLUDED in repo for Gemini CLI installation
 *.tsbuildinfo
 
 # Environment variables - NEVER COMMIT SECRETS

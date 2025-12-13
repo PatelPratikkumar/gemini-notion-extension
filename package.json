@@ -30,12 +30,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/gemini-notion-extension.git"
+    "url": "git+https://github.com/PatelPratikkumar/gemini-notion-extension.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/gemini-notion-extension/issues"
+    "url": "https://github.com/PatelPratikkumar/gemini-notion-extension/issues"
   },
-  "homepage": "https://github.com/yourusername/gemini-notion-extension#readme",
+  "homepage": "https://github.com/PatelPratikkumar/gemini-notion-extension#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.5.0",
     "@notionhq/client": "^2.2.15",

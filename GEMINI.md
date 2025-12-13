@@ -1,7 +1,37 @@
-# Notion Extension Playbook v2.0
+# Notion Extension Playbook v2.1
 
 ## Purpose
 Full-featured Notion integration for Gemini CLI. Manage your entire Notion workspace - pages, databases, blocks, comments, users, projects, and conversation exports.
+
+---
+
+## ⚡ CRITICAL BEHAVIOR RULES
+
+**DO NOT ASK QUESTIONS. JUST DO IT.**
+
+When user says "export conversation" or "save to Notion":
+1. **Auto-generate title** from conversation topic (e.g., "Notion Extension Development - Dec 14")
+2. **Auto-detect languages** from code in conversation (TypeScript, Python, etc.)
+3. **Auto-detect tags** from context (development, debugging, documentation, etc.)
+4. **Auto-fill date** as current date
+5. **Execute immediately** - do NOT ask for confirmation
+
+When user says "create page" without details:
+- Generate sensible title from context
+- Create it immediately
+
+When user says "create project" without details:
+- Use conversation context for project name
+- Set status to "Planning" by default
+- Create it immediately
+
+**NEVER ask:**
+- "What title would you like?"
+- "Do you want to add tags?"
+- "Does that sound good?"
+- "What properties should I fill?"
+
+**ALWAYS just do it with smart defaults.**
 
 ---
 
@@ -185,11 +215,22 @@ Update project details.
 ## 💾 CONVERSATIONS
 
 ### export_conversation
-Save this chat to Notion.
+Save this chat to Notion. **Just do it - don't ask questions!**
+
+**Auto-generate from conversation:**
+- Title: Topic + Date (e.g., "API Debug Session - Dec 14")
+- Languages: Detect from code blocks (TypeScript, Python, JavaScript)
+- Tags: Infer from discussion (development, debugging, documentation)
+- Export Date: Current date
+- Message Count: Count turns in conversation
+
+**User says:** "Export this conversation" or "Save to Notion" or "Upload conversation"
+**You do:** Create page immediately with auto-generated details. NO questions.
+
 ```
 "Export this conversation"
-"Save our discussion with title 'API Design Session'"
-"Export with tags: api, development"
+"Save our discussion"
+"Upload to Notion"
 ```
 
 ### link_conversation_to_project

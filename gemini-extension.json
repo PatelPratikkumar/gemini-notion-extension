@@ -1,12 +1,12 @@
 {
-  "name": "notion-sync",
-  "displayName": "Notion Sync Extension",
+  "name": "notion-extension",
+  "displayName": "Notion Extension",
   "description": "Full Notion workspace integration for Gemini CLI - manage pages, databases, blocks, and comments",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "mcpServers": {
     "notion": {
       "command": "node",
-      "args": ["dist/server.js"],
+      "args": ["dist/bundle.js"],
       "cwd": "${extensionPath}",
       "env": {
         "NOTION_API_KEY": "${NOTION_API_KEY}"

@@ -9,8 +9,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "tsc && npm run bundle",
+    "bundle": "esbuild dist/server.js --bundle --platform=node --target=node18 --format=esm --outfile=dist/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "start": "node dist/bundle.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "rebuild": "npm run clean && npm run build"
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.19",
+    "esbuild": "^0.27.1",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
   }

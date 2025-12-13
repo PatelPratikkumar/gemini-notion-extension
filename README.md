@@ -1,28 +1,66 @@
-# Gemini CLI Notion Extension
+# 📝 Gemini CLI Notion Extension
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
+> Full Notion workspace integration for [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
 
-Full-featured Notion integration for [Gemini CLI](https://github.com/google-gemini/gemini-cli). Manage your entire Notion workspace directly from the command line.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+[![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-Extension-blue.svg)](https://github.com/google-gemini/gemini-cli)
+
+Manage your entire Notion workspace directly from the command line with natural language.
 
 ## ✨ Features
 
-- 🔍 **Search** - Find pages and databases across your workspace
-- 📄 **Pages** - Create, read, update, and delete pages
-- 🗃️ **Databases** - Query, create entries, and manage schemas
-- 📝 **Blocks** - Add and modify content with markdown support
-- 💬 **Comments** - Read and add comments to pages
-- 👥 **Users** - List workspace members
-- 📁 **Projects** - Track projects with status and technologies
-- 💾 **Conversations** - Export Gemini chats to Notion
-- 🔐 **Secure** - API keys stored in OS credential manager
+- **25 MCP Tools** covering all Notion operations
+- **Natural Language** - "Create a page about project planning"
+- **Markdown Support** - Write in markdown, converts to Notion blocks
+- **Smart Formatting** - Clean, readable output (no raw JSON!)
+- **Database Shortcuts** - Use "projects" or "conversations" as aliases
+- **Voice-Friendly** - Handles transcription errors gracefully
+- **Secure Storage** - API keys stored in OS credential manager
+
+### Supported Operations
+
+| Category | Operations |
+|----------|------------|
+| **Search** | Full-text search across workspace |
+| **Pages** | Create, read, update, delete |
+| **Databases** | Query, create entries, get/update schema |
+| **Blocks** | Append, get children, delete |
+| **Comments** | List, create |
+| **Users** | List all, get current user |
+| **Projects** | List, create, update status |
+| **Conversations** | Export Gemini chats to Notion |
+
+---
 
 ## 📋 Prerequisites
 
-- [Node.js](https://nodejs.org/) v18.0.0 or higher
-- [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed
-- [Notion account](https://www.notion.so/) with integration access
+Before installing, you need:
+
+1. **Node.js 18+** - [Download here](https://nodejs.org/)
+2. **Gemini CLI** - Install globally:
+   ```bash
+   npm install -g @google/gemini-cli
+   ```
+3. **Notion Integration Token** - Get yours below 👇
+
+---
+
+## 🔐 Getting Your Notion API Token
+
+1. Log in to [Notion](https://www.notion.so)
+2. Go to [My Integrations](https://www.notion.so/my-integrations)
+3. Click **"+ New integration"**
+4. Configure:
+   - **Name**: `Gemini CLI Extension`
+   - **Associated workspace**: Select your workspace
+   - **Capabilities**: Check all Content, Comment, and User capabilities
+5. Click **"Submit"**
+6. Copy the **Internal Integration Token** (starts with `secret_`)
+
+> ⚠️ **Keep your token secret!** Never share it or commit it to git.
+
+---
 
 ## 🚀 Quick Start
 
@@ -435,3 +473,35 @@ MIT License - see [LICENSE](LICENSE) file.
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli) by Google
 - [Notion API](https://developers.notion.com/) by Notion
 - [Model Context Protocol](https://modelcontextprotocol.io/) for MCP server framework
+
+---
+
+## ❓ Troubleshooting
+
+### "NOTION_API_KEY not set"
+
+Make sure you've run the setup script or set the credential manually:
+- Windows: `echo $env:NOTION_API_KEY`
+- macOS: `security find-generic-password -s "gemini-notion-extension" -a "NOTION_API_KEY" -w`
+- Linux: `secret-tool lookup service gemini-notion-extension account NOTION_API_KEY`
+
+### "Extension not loading"
+
+1. Rebuild: `npm run build`
+2. Relink: `gemini extensions uninstall notion-sync && gemini extensions link .`
+
+### "API errors" or "object not found"
+
+- Verify your integration is shared with the page/database in Notion
+- Check your token at [Notion Integrations](https://www.notion.so/my-integrations)
+- Ensure token has correct capabilities (Content, Comments, User)
+
+### "Page not accessible"
+
+1. Open the page in Notion
+2. Click **Share** → **Add connections**
+3. Select your **Gemini CLI Extension** integration
+
+---
+
+**Made with ❤️ for productivity enthusiasts**

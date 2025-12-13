@@ -1,22 +1,18 @@
 {
   "name": "notion-sync",
   "displayName": "Notion Sync Extension",
-  "description": "Export Gemini conversations and manage projects in Notion",
-  "version": "1.0.0",
-  "author": "",
-  "mcpServers": [
-    {
-      "id": "notion-connector",
-      "name": "Notion Connector",
+  "description": "Full Notion workspace integration for Gemini CLI - manage pages, databases, blocks, and comments",
+  "version": "2.1.0",
+  "mcpServers": {
+    "notion": {
       "command": "node",
-      "args": ["./dist/server.js"],
+      "args": ["dist/server.js"],
+      "cwd": "${extensionPath}",
       "env": {
-        "NOTION_API_KEY": "${NOTION_API_KEY}",
-        "NOTION_CONVERSATION_DB": "${NOTION_CONVERSATION_DB}",
-        "NOTION_PROJECT_DB": "${NOTION_PROJECT_DB}"
+        "NOTION_API_KEY": "${NOTION_API_KEY}"
       }
     }
-  ],
+  },
   "commands": [
     {
       "name": "export-conversation",

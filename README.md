@@ -1,6 +1,6 @@
 # Gemini CLI Notion Extension
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/gemini-notion-extension)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 
@@ -26,10 +26,29 @@ Full-featured Notion integration for [Gemini CLI](https://github.com/google-gemi
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### Option A: Install from GitHub (Recommended)
 
 ```bash
-git clone https://github.com/yourusername/gemini-notion-extension.git
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension
+```
+
+Then run the setup script from the extension directory:
+```bash
+# Windows
+cd ~/.gemini/extensions/notion-sync
+.\setup-windows.ps1
+
+# macOS/Linux  
+cd ~/.gemini/extensions/notion-sync
+chmod +x setup-unix.sh && ./setup-unix.sh
+```
+
+### Option B: Clone and Build Manually
+
+#### 1. Clone the Repository
+
+```bash
+git clone https://github.com/PatelPratikkumar/gemini-notion-extension.git
 cd gemini-notion-extension
 ```
 

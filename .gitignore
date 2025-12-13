@@ -5,60 +5,35 @@
 # Dependencies
 node_modules/
 
-# Build output (TypeScript compilation)
-# NOTE: dist/ is INCLUDED in repo for Gemini CLI installation
+# Build output
 *.tsbuildinfo
 
-# Environment variables - NEVER COMMIT SECRETS
+# Environment & secrets
 .env
 .env.*
 !.env.example
 
-# Local configuration and cache
+# Local cache
 .local/
 .notion-cache.json
 *.log
-npm-debug.log*
 
-# IDE and editor files
+# IDE
 .vscode/
 .idea/
 *.swp
-*.swo
 *~
-*.sublime-*
 
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
-# ============================================
-# PRIVATE FILES - NEVER COMMIT TO PUBLIC REPO
-# ============================================
-# These folders contain personal research, notes,
-# and development files that should stay local.
-
-research/
-support/
-docs/dev/
+# Private/local files
 *.private.*
 *-private.*
-notes.md
-TODO.md
-scratch/
-temp/
-tmp/
 
-# Test outputs
+# Test & temp
 coverage/
-.nyc_output/
-test-results/
-
-# Backup files
 *.bak
 *.backup
-*.old
 

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-12-14
+
+### Added
+- Direct GitHub installation support
+- Comprehensive troubleshooting section in README
+- "Made with ❤️" footer matching Todoist extension style
+
+### Changed
+- README restructured to match Todoist extension format
+- Cleaner .gitignore without exposing private folder names
+- Better badge styling and documentation
+
+### Fixed
+- Install command format (full URL, not github:user/repo)
+- Repository URLs updated to correct GitHub username
+
 ## [2.0.0] - 2025-12-14
 
 ### Added

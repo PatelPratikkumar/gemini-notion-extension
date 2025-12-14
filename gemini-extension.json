@@ -17,56 +17,27 @@
       "timeout": 30
     }
   },
-  "contextFiles": [
-    {
-      "path": "GEMINI.md",
-      "type": "instructions",
-      "priority": 100,
-      "scope": "global"
-    }
-  ],
-  "capabilities": {
-    "supportsStreaming": true,
-    "supportsLargeFileTransfer": true,
-    "maxPayloadSize": 10485760,
-    "supportedFormats": ["json", "markdown", "text"],
-    "requiresAuthentication": true
-  },
+  "contextPath": "GEMINI.md",
   "commands": [
     {
       "name": "export-conversation",
       "description": "Export current Gemini conversation to Notion",
-      "prompt": "Export this conversation to my Notion workspace. Auto-generate title from topic, detect languages from code, infer tags from context, set date to today. Execute immediately without asking questions.",
-      "requiresConfirmation": false
+      "usage": "/export-conversation [--title TITLE] [--tags TAGS] [--project PROJECT]"
     },
     {
-      "name": "save-to-project",
-      "description": "Associate conversation with a project",
-      "prompt": "Save this conversation reference to project {projectName}",
-      "requiresConfirmation": false
-    },
-    {
-      "name": "list-projects",
-      "description": "List all projects in Notion",
-      "prompt": "Show me all my ongoing projects from Notion",
-      "requiresConfirmation": false
+      "name": "list-databases",
+      "description": "List all Notion databases",
+      "usage": "/list-databases"
     },
     {
       "name": "search-notion",
       "description": "Search across Notion workspace",
-      "prompt": "Search my Notion workspace for: {query}",
-      "requiresConfirmation": false
+      "usage": "/search-notion [query]"
     },
     {
       "name": "recent-changes",
       "description": "Show recently modified pages",
-      "prompt": "Show me pages recently edited in Notion, sorted by last_edited_time descending",
-      "requiresConfirmation": false
+      "usage": "/recent-changes [--limit NUMBER]"
     }
-  ],
-  "metadata": {
-    "category": "productivity",
-    "tags": ["notion", "conversation-management", "database", "knowledge-base"],
-    "documentation": "https://github.com/PatelPratikkumar/gemini-notion-extension#readme"
-  }
+  ]
 }

@@ -119,6 +119,9 @@ const enhancedTools = [
 // Combined tools array (original + enhanced)
 const allTools = [...tools, ...enhancedTools];
 
+// Debug: Log number of tools being registered
+console.error(`📊 Registering ${allTools.length} tools: ${allTools.map(t => t.name).slice(0, 5).join(', ')}${allTools.length > 5 ? '...' : ''}`);
+
 // Get the directory where this script is located
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1435,16 +1438,20 @@ async function initialize() {
 
 // Create MCP server
 const server = new Server(
-  { name: 'notion-sync-enhanced', version: '3.0.0' },
+  { name: 'notion-sync-enhanced', version: '3.0.1' },
   { capabilities: { tools: {} } }
 );
 
 // List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: allTools }));
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  console.error(`🔧 ListTools requested: returning ${allTools.length} tools`);
+  return { tools: allTools };
+});
 
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  console.error(`🚀 Tool called: ${name}`);
   
   const respond = (data: any) => ({
     content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -2627,7 +2634,7 @@ async function main() {
   await initialize();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('🚀 Notion MCP Server v3.0.0 running - Enhanced Edition with 46 tools (38 original + 8 enhanced)');
+  console.error('🚀 Notion MCP Server v3.0.1 running - Enhanced Edition with 46 tools (38 original + 8 enhanced)');
 }
 
 main().catch(err => {

@@ -10347,6 +10347,7 @@ var enhancedTools = [
   }
 ];
 var allTools = [...tools, ...enhancedTools];
+console.error(`\u{1F4CA} Registering ${allTools.length} tools: ${allTools.map((t) => t.name).slice(0, 5).join(", ")}${allTools.length > 5 ? "..." : ""}`);
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
 var PROJECT_ROOT = join(__dirname, "..");
@@ -11256,10 +11257,14 @@ async function initialize() {
     process.exit(1);
   }
 }
-var server = new Server({ name: "notion-sync-enhanced", version: "3.0.0" }, { capabilities: { tools: {} } });
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: allTools }));
+var server = new Server({ name: "notion-sync-enhanced", version: "3.0.1" }, { capabilities: { tools: {} } });
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  console.error(`\u{1F527} ListTools requested: returning ${allTools.length} tools`);
+  return { tools: allTools };
+});
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  console.error(`\u{1F680} Tool called: ${name}`);
   const respond = (data) => ({
     content: [{ type: "text", text: JSON.stringify(data, null, 2) }]
   });
@@ -12174,7 +12179,7 @@ async function main() {
   await initialize();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("\u{1F680} Notion MCP Server v3.0.0 running - Enhanced Edition with 46 tools (38 original + 8 enhanced)");
+  console.error("\u{1F680} Notion MCP Server v3.0.1 running - Enhanced Edition with 46 tools (38 original + 8 enhanced)");
 }
 main().catch((err) => {
   console.error("Fatal:", err);

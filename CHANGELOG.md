@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2025-12-14
+
+### Added
+- **TTL-Based Caching Layer**: Intelligent caching for schemas (10min), lists (2min), pages (1min), users (30min)
+- **Enhanced Logging System**: Structured logging with levels (debug, info, warn, error) and log retrieval
+- **Metrics Collection**: Track API call counts, latency, error rates per operation
+- **Offline Queue**: Queue operations when offline, process when back online
+- **Template System**: 5 built-in templates (meeting-notes, project-brief, daily-standup, bug-report, code-review)
+- **Schema Validation**: Validate properties against database schema before API calls
+- **Health Check Tool**: Monitor Notion API connectivity, cache status, queue size
+- **Batch Operations**: 
+  - `batch_create_pages`: Create multiple pages at once
+  - `batch_archive_pages`: Archive multiple pages at once
+  - `batch_delete_blocks`: Delete multiple blocks at once
+- **Enhanced Page Duplication**: Full content copy with proper block cloning
+
+### New Tools (12 added, 38 total)
+- `health_check` - System health and API connectivity
+- `get_metrics` - API call statistics and performance
+- `get_logs` - Retrieve operation logs for debugging
+- `clear_cache` - Clear cached data (schemas, lists, pages, users, all)
+- `list_templates` - Show available page templates
+- `create_from_template` - Create page from template
+- `batch_create_pages` - Create multiple pages
+- `batch_archive_pages` - Archive multiple pages
+- `batch_delete_blocks` - Delete multiple blocks
+- `validate_properties` - Validate against database schema
+- `get_queue_status` - Offline queue status
+- `clear_queue` - Clear offline queue
+
+### Changed
+- Bundle size increased to ~670KB (additional features)
+- `duplicate_page` now uses enhanced duplication with full content copy
+
 ## [2.7.0] - 2025-12-14
 
 ### Added
@@ -113,11 +147,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Roadmap
 
-### [2.8.0] - Planned
-- [ ] Template support for common page structures
+### [2.9.0] - Planned
 - [ ] Webhook support for real-time updates
-- [ ] Offline caching for faster queries
 - [ ] Connection pooling for better performance
+- [ ] gzip compression for large payloads
+- [ ] Progress streaming for long operations
+- [ ] Custom template creation and management
 
 ### [3.0.0] - Future
 - [ ] Two-way sync between local files and Notion
@@ -125,3 +160,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] Custom block type support
 - [ ] Advanced filtering with natural language
 - [ ] Real-time collaboration features
+- [ ] Plugin system for custom tools

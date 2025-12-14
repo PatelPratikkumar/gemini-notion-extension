@@ -434,6 +434,17 @@ gemini-notion-extension/
 
 ## 🔄 Changelog
 
+### v2.8.0 (2025-12-14) ⭐ LATEST
+- 💾 **TTL Caching**: Smart caching for schemas, lists, pages, users
+- 📊 **Metrics**: Track API calls, latency, error rates
+- 📝 **Logging**: Structured logs with levels (debug/info/warn/error)
+- 📴 **Offline Queue**: Queue operations when disconnected
+- 📑 **5 Templates**: meeting-notes, project-brief, daily-standup, bug-report, code-review
+- ✅ **Schema Validation**: Validate before API calls
+- 🏥 **Health Check**: Monitor system status
+- 📦 **Batch Ops**: Create/archive pages, delete blocks in bulk
+- 🔢 **38 Total Tools** (12 new advanced tools)
+
 ### v2.7.0 (2025-12-14)
 - ⚡ **Rate Limiting**: Token Bucket algorithm (3 requests/second)
 - 🔄 **Retry Logic**: Exponential backoff for 429/5xx errors

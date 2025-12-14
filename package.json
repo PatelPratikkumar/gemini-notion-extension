@@ -1,6 +1,6 @@
 {
   "name": "gemini-notion-extension",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "Full-featured Notion integration for Gemini CLI - manage pages, databases, blocks, comments, and more",
   "main": "dist/server.js",
   "type": "module",

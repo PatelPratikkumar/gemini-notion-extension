@@ -248,6 +248,540 @@ async function appendBlocksInBatches(pageId, blocks, batchSize = 100) {
         }
     }
 }
+class TTLCache {
+    cache = new Map();
+    defaultTTL;
+    constructor(defaultTTLSeconds = 300) {
+        this.defaultTTL = defaultTTLSeconds * 1000;
+    }
+    set(key, data, ttlSeconds) {
+        this.cache.set(key, {
+            data,
+            timestamp: Date.now(),
+            ttl: (ttlSeconds ?? this.defaultTTL / 1000) * 1000,
+        });
+    }
+    get(key) {
+        const entry = this.cache.get(key);
+        if (!entry)
+            return undefined;
+        if (Date.now() - entry.timestamp > entry.ttl) {
+            this.cache.delete(key);
+            return undefined;
+        }
+        return entry.data;
+    }
+    has(key) {
+        return this.get(key) !== undefined;
+    }
+    invalidate(key) {
+        this.cache.delete(key);
+    }
+    invalidatePattern(pattern) {
+        const regex = new RegExp(pattern);
+        for (const key of this.cache.keys()) {
+            if (regex.test(key)) {
+                this.cache.delete(key);
+            }
+        }
+    }
+    clear() {
+        this.cache.clear();
+    }
+    stats() {
+        return { size: this.cache.size, keys: Array.from(this.cache.keys()) };
+    }
+}
+// Global caches with different TTLs
+const schemaCache = new TTLCache(600); // 10 min for schemas (rarely change)
+const listCache = new TTLCache(120); // 2 min for lists (moderately dynamic)
+const userCache = new TTLCache(1800); // 30 min for users (rarely change)
+const pageCache = new TTLCache(60); // 1 min for pages (frequently change)
+class Logger {
+    level = 'info';
+    logs = [];
+    maxLogs = 1000;
+    levelPriority = {
+        debug: 0,
+        info: 1,
+        warn: 2,
+        error: 3,
+    };
+    setLevel(level) {
+        this.level = level;
+    }
+    shouldLog(level) {
+        return this.levelPriority[level] >= this.levelPriority[this.level];
+    }
+    log(level, operation, message, metadata) {
+        if (!this.shouldLog(level))
+            return;
+        const entry = {
+            timestamp: new Date().toISOString(),
+            level,
+            operation,
+            message,
+            metadata,
+        };
+        this.logs.push(entry);
+        if (this.logs.length > this.maxLogs) {
+            this.logs.shift();
+        }
+        // Output to stderr (MCP standard)
+        const prefix = `[${level.toUpperCase()}][${operation}]`;
+        console.error(`${prefix} ${message}`, metadata ? JSON.stringify(metadata) : '');
+    }
+    debug(operation, message, metadata) {
+        this.log('debug', operation, message, metadata);
+    }
+    info(operation, message, metadata) {
+        this.log('info', operation, message, metadata);
+    }
+    warn(operation, message, metadata) {
+        this.log('warn', operation, message, metadata);
+    }
+    error(operation, message, metadata) {
+        this.log('error', operation, message, metadata);
+    }
+    getRecentLogs(count = 50) {
+        return this.logs.slice(-count);
+    }
+    getLogs(options) {
+        return this.logs.filter(log => {
+            if (options.level && this.levelPriority[log.level] < this.levelPriority[options.level])
+                return false;
+            if (options.operation && log.operation !== options.operation)
+                return false;
+            if (options.since && new Date(log.timestamp) < options.since)
+                return false;
+            return true;
+        });
+    }
+}
+const logger = new Logger();
+class Metrics {
+    metrics = new Map();
+    startTimes = new Map();
+    startTimer(operation, callId) {
+        this.startTimes.set(`${operation}:${callId}`, Date.now());
+    }
+    endTimer(operation, callId, error = false) {
+        const key = `${operation}:${callId}`;
+        const startTime = this.startTimes.get(key);
+        this.startTimes.delete(key);
+        const duration = startTime ? Date.now() - startTime : 0;
+        let entry = this.metrics.get(operation);
+        if (!entry) {
+            entry = { operation, count: 0, totalDuration: 0, errors: 0, lastCall: 0, avgDuration: 0 };
+            this.metrics.set(operation, entry);
+        }
+        entry.count++;
+        entry.totalDuration += duration;
+        entry.avgDuration = entry.totalDuration / entry.count;
+        entry.lastCall = Date.now();
+        if (error)
+            entry.errors++;
+        return duration;
+    }
+    getMetrics() {
+        return Object.fromEntries(this.metrics);
+    }
+    getOperationMetrics(operation) {
+        return this.metrics.get(operation);
+    }
+    getSummary() {
+        let totalCalls = 0;
+        let totalErrors = 0;
+        let totalDuration = 0;
+        for (const entry of this.metrics.values()) {
+            totalCalls += entry.count;
+            totalErrors += entry.errors;
+            totalDuration += entry.totalDuration;
+        }
+        return {
+            totalCalls,
+            totalErrors,
+            avgLatency: totalCalls > 0 ? totalDuration / totalCalls : 0,
+            operations: this.metrics.size,
+        };
+    }
+    reset() {
+        this.metrics.clear();
+        this.startTimes.clear();
+    }
+}
+const metrics = new Metrics();
+class OfflineQueue {
+    queue = [];
+    isOnline = true;
+    maxQueueSize = 100;
+    maxRetries = 3;
+    setOnlineStatus(online) {
+        this.isOnline = online;
+        if (online) {
+            logger.info('OfflineQueue', 'Back online, processing queued operations');
+        }
+    }
+    isQueueEnabled() {
+        return !this.isOnline;
+    }
+    enqueue(operation, args) {
+        if (this.queue.length >= this.maxQueueSize) {
+            throw new Error('Offline queue is full. Please try again when online.');
+        }
+        const id = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.queue.push({
+            id,
+            operation,
+            args,
+            timestamp: Date.now(),
+            retries: 0,
+        });
+        logger.info('OfflineQueue', `Queued operation: ${operation}`, { id });
+        return id;
+    }
+    getQueuedOperations() {
+        return [...this.queue];
+    }
+    getQueueSize() {
+        return this.queue.length;
+    }
+    removeFromQueue(id) {
+        const index = this.queue.findIndex(op => op.id === id);
+        if (index !== -1) {
+            this.queue.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+    clearQueue() {
+        this.queue = [];
+    }
+    // Get next operation to process (for sync processing)
+    dequeue() {
+        return this.queue.shift();
+    }
+}
+const offlineQueue = new OfflineQueue();
+const builtInTemplates = {
+    'meeting-notes': {
+        id: 'meeting-notes',
+        name: 'Meeting Notes',
+        description: 'Template for meeting documentation',
+        icon: '📝',
+        properties: {},
+        blocks: [
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📅 Meeting Details' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Date: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Attendees: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Duration: ' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📋 Agenda' } }] } },
+            { type: 'numbered_list_item', numbered_list_item: { rich_text: [{ type: 'text', text: { content: 'Item 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📝 Notes' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '✅ Action Items' } }] } },
+            { type: 'to_do', to_do: { rich_text: [{ type: 'text', text: { content: 'Action item 1' } }], checked: false } },
+        ],
+    },
+    'project-brief': {
+        id: 'project-brief',
+        name: 'Project Brief',
+        description: 'Template for project documentation',
+        icon: '📊',
+        properties: {},
+        blocks: [
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '🎯 Project Overview' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: 'Brief description of the project...' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📋 Objectives' } }] } },
+            { type: 'numbered_list_item', numbered_list_item: { rich_text: [{ type: 'text', text: { content: 'Objective 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '👥 Team' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Team member 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📅 Timeline' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Phase 1: ' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '🔗 Resources' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [] } },
+        ],
+    },
+    'daily-standup': {
+        id: 'daily-standup',
+        name: 'Daily Standup',
+        description: 'Template for daily standup notes',
+        icon: '☀️',
+        properties: {},
+        blocks: [
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '✅ Yesterday' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Completed task 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📋 Today' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Planned task 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '🚧 Blockers' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: 'None' } }] } },
+        ],
+    },
+    'bug-report': {
+        id: 'bug-report',
+        name: 'Bug Report',
+        description: 'Template for bug documentation',
+        icon: '🐛',
+        properties: {},
+        blocks: [
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '🐛 Bug Description' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: 'Describe the bug...' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📝 Steps to Reproduce' } }] } },
+            { type: 'numbered_list_item', numbered_list_item: { rich_text: [{ type: 'text', text: { content: 'Step 1' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '✅ Expected Behavior' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '❌ Actual Behavior' } }] } },
+            { type: 'paragraph', paragraph: { rich_text: [] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '🖥️ Environment' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'OS: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Browser: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Version: ' } }] } },
+        ],
+    },
+    'code-review': {
+        id: 'code-review',
+        name: 'Code Review',
+        description: 'Template for code review documentation',
+        icon: '🔍',
+        properties: {},
+        blocks: [
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '📋 Review Summary' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'PR/MR Link: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Author: ' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: 'Reviewer: ' } }] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '✅ What Works Well' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '⚠️ Suggestions' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [] } },
+            { type: 'divider', divider: {} },
+            { type: 'heading_2', heading_2: { rich_text: [{ type: 'text', text: { content: '❓ Questions' } }] } },
+            { type: 'bulleted_list_item', bulleted_list_item: { rich_text: [] } },
+        ],
+    },
+};
+function getTemplate(templateId) {
+    return builtInTemplates[templateId];
+}
+function listTemplates() {
+    return Object.values(builtInTemplates);
+}
+function validatePropertiesAgainstSchema(properties, schema) {
+    const errors = [];
+    for (const [propName, propValue] of Object.entries(properties)) {
+        const schemaProp = schema[propName];
+        if (!schemaProp) {
+            errors.push(`Unknown property: ${propName}`);
+            continue;
+        }
+        const expectedType = schemaProp.type;
+        // Type validation
+        switch (expectedType) {
+            case 'title':
+            case 'rich_text':
+                if (typeof propValue !== 'string' && !Array.isArray(propValue)) {
+                    errors.push(`${propName}: Expected string or rich_text array`);
+                }
+                break;
+            case 'number':
+                if (typeof propValue !== 'number') {
+                    errors.push(`${propName}: Expected number`);
+                }
+                break;
+            case 'checkbox':
+                if (typeof propValue !== 'boolean') {
+                    errors.push(`${propName}: Expected boolean`);
+                }
+                break;
+            case 'select':
+                if (typeof propValue !== 'string') {
+                    errors.push(`${propName}: Expected string for select`);
+                }
+                else if (schemaProp.select?.options) {
+                    const validOptions = schemaProp.select.options.map((o) => o.name);
+                    if (!validOptions.includes(propValue)) {
+                        errors.push(`${propName}: Invalid option "${propValue}". Valid: ${validOptions.join(', ')}`);
+                    }
+                }
+                break;
+            case 'multi_select':
+                if (!Array.isArray(propValue)) {
+                    errors.push(`${propName}: Expected array for multi_select`);
+                }
+                break;
+            case 'date':
+                if (typeof propValue !== 'string' && typeof propValue !== 'object') {
+                    errors.push(`${propName}: Expected date string or object`);
+                }
+                break;
+            case 'url':
+                if (typeof propValue !== 'string') {
+                    errors.push(`${propName}: Expected URL string`);
+                }
+                break;
+            case 'email':
+                if (typeof propValue !== 'string' || !propValue.includes('@')) {
+                    errors.push(`${propName}: Expected valid email`);
+                }
+                break;
+            case 'phone_number':
+                if (typeof propValue !== 'string') {
+                    errors.push(`${propName}: Expected phone number string`);
+                }
+                break;
+        }
+    }
+    return { valid: errors.length === 0, errors };
+}
+async function checkHealth() {
+    const startTime = Date.now();
+    let notionApiHealthy = false;
+    try {
+        await withRetry(() => notion.users.me({}), 1, 'health_check');
+        notionApiHealthy = true;
+    }
+    catch {
+        notionApiHealthy = false;
+    }
+    const latencyMs = Date.now() - startTime;
+    const metricsSummary = metrics.getSummary();
+    return {
+        status: notionApiHealthy ? 'healthy' : 'unhealthy',
+        notionApi: notionApiHealthy,
+        latencyMs,
+        cacheStats: {
+            schemas: schemaCache.stats().size,
+            lists: listCache.stats().size,
+            pages: pageCache.stats().size,
+            users: userCache.stats().size,
+        },
+        queueSize: offlineQueue.getQueueSize(),
+        metrics: {
+            totalCalls: metricsSummary.totalCalls,
+            totalErrors: metricsSummary.totalErrors,
+            avgLatency: Math.round(metricsSummary.avgLatency),
+        },
+        timestamp: new Date().toISOString(),
+    };
+}
+async function batchCreatePages(parentId, pages) {
+    const results = { successful: 0, failed: 0, results: [] };
+    for (const page of pages) {
+        try {
+            const response = await withRetry(() => notion.pages.create({
+                parent: { page_id: parentId },
+                properties: {
+                    title: { title: [{ text: { content: page.title } }] },
+                    ...page.properties,
+                },
+            }), 3, 'batch_create_page');
+            // Add content if provided
+            if (page.content) {
+                const blocks = markdownToBlocks(page.content);
+                await appendBlocksInBatches(response.id, blocks);
+            }
+            results.successful++;
+            results.results.push({ id: response.id, success: true });
+        }
+        catch (error) {
+            results.failed++;
+            results.results.push({ id: page.title, success: false, error: error.message });
+        }
+    }
+    return results;
+}
+async function batchArchivePages(pageIds) {
+    const results = { successful: 0, failed: 0, results: [] };
+    for (const pageId of pageIds) {
+        try {
+            await withRetry(() => notion.pages.update({ page_id: pageId, archived: true }), 3, 'batch_archive_page');
+            results.successful++;
+            results.results.push({ id: pageId, success: true });
+        }
+        catch (error) {
+            results.failed++;
+            results.results.push({ id: pageId, success: false, error: error.message });
+        }
+    }
+    return results;
+}
+async function batchDeleteBlocks(blockIds) {
+    const results = { successful: 0, failed: 0, results: [] };
+    for (const blockId of blockIds) {
+        try {
+            await withRetry(() => notion.blocks.delete({ block_id: blockId }), 3, 'batch_delete_block');
+            results.successful++;
+            results.results.push({ id: blockId, success: true });
+        }
+        catch (error) {
+            results.failed++;
+            results.results.push({ id: blockId, success: false, error: error.message });
+        }
+    }
+    return results;
+}
+// ============================================================
+// PAGE DUPLICATION
+// ============================================================
+async function duplicatePage(sourcePageId, options = {}) {
+    // Get source page
+    const sourcePage = await withRetry(() => notion.pages.retrieve({ page_id: sourcePageId }), 3, 'duplicate_get_source');
+    // Determine parent
+    const parent = options.targetParentId
+        ? { page_id: options.targetParentId }
+        : sourcePage.parent;
+    // Clone properties
+    const properties = { ...sourcePage.properties };
+    // Update title if provided
+    if (options.newTitle) {
+        const titleKey = Object.keys(properties).find(k => properties[k].type === 'title');
+        if (titleKey) {
+            properties[titleKey] = { title: [{ text: { content: options.newTitle } }] };
+        }
+    }
+    else {
+        // Append " (Copy)" to title
+        const titleKey = Object.keys(properties).find(k => properties[k].type === 'title');
+        if (titleKey && properties[titleKey].title?.[0]?.text?.content) {
+            const originalTitle = properties[titleKey].title[0].text.content;
+            properties[titleKey] = { title: [{ text: { content: `${originalTitle} (Copy)` } }] };
+        }
+    }
+    // Create new page
+    const newPage = await withRetry(() => notion.pages.create({
+        parent,
+        icon: sourcePage.icon,
+        cover: sourcePage.cover,
+        properties,
+    }), 3, 'duplicate_create_page');
+    // Copy content if requested
+    if (options.includeContent !== false) {
+        const blocks = await paginateBlockChildren(sourcePageId);
+        if (blocks.length > 0) {
+            // Deep clone blocks (remove IDs)
+            const clonedBlocks = blocks.map((block) => {
+                const { id, created_time, last_edited_time, created_by, last_edited_by, has_children, parent, ...rest } = block;
+                return rest;
+            });
+            await appendBlocksInBatches(newPage.id, clonedBlocks);
+        }
+    }
+    return newPage;
+}
 // ============================================================
 /**
  * Load database IDs from cache file
@@ -984,25 +1518,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             // ==================== UTILITY ====================
             case 'duplicate_page': {
                 const sourceId = parsePageId(args?.pageId);
-                const source = await notion.pages.retrieve({ page_id: sourceId });
-                const blocks = await notion.blocks.children.list({ block_id: sourceId, page_size: 100 });
-                const targetParent = args?.targetParentId
+                const newTitle = args?.newTitle;
+                const targetParentId = args?.targetParentId
                     ? parsePageId(args.targetParentId)
-                    : source.parent.page_id || source.parent.database_id;
-                const newTitle = args?.newTitle ||
-                    richTextToPlain(source.properties?.title?.title || source.properties?.Name?.title || []) + ' (Copy)';
-                const parent = source.parent.type === 'database_id'
-                    ? { database_id: targetParent }
-                    : { page_id: targetParent };
-                const properties = source.parent.type === 'database_id'
-                    ? { ...source.properties, Name: { title: [{ text: { content: newTitle } }] } }
-                    : { title: { title: [{ text: { content: newTitle } }] } };
-                const newPage = await notion.pages.create({
-                    parent,
-                    properties,
-                    children: blocks.results,
+                    : undefined;
+                const newPage = await duplicatePage(sourceId, {
+                    newTitle,
+                    targetParentId,
+                    includeContent: true,
                 });
-                return respond({ id: newPage.id, url: newPage.url, message: 'Page duplicated' });
+                return respond({ id: newPage.id, url: newPage.url, message: 'Page duplicated with content' });
             }
             case 'get_recent_changes': {
                 const filter = args?.filter === 'all' ? undefined :
@@ -1023,6 +1548,159 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }));
                 return respond({ count: formatted.length, results: formatted });
             }
+            // ==================== ADVANCED OPERATIONS ====================
+            case 'health_check': {
+                const health = await checkHealth();
+                return respond(health);
+            }
+            case 'get_metrics': {
+                const operation = args?.operation;
+                if (operation) {
+                    const opMetrics = metrics.getOperationMetrics(operation);
+                    return respond(opMetrics || { error: `No metrics for operation: ${operation}` });
+                }
+                return respond({
+                    summary: metrics.getSummary(),
+                    operations: metrics.getMetrics(),
+                });
+            }
+            case 'get_logs': {
+                const count = args?.count || 50;
+                const level = args?.level;
+                const operation = args?.operation;
+                const logs = level || operation
+                    ? logger.getLogs({ level, operation })
+                    : logger.getRecentLogs(count);
+                return respond({ count: logs.length, logs });
+            }
+            case 'clear_cache': {
+                const cacheType = args?.type || 'all';
+                switch (cacheType) {
+                    case 'schemas':
+                        schemaCache.clear();
+                        break;
+                    case 'lists':
+                        listCache.clear();
+                        break;
+                    case 'pages':
+                        pageCache.clear();
+                        break;
+                    case 'users':
+                        userCache.clear();
+                        break;
+                    case 'all':
+                    default:
+                        schemaCache.clear();
+                        listCache.clear();
+                        pageCache.clear();
+                        userCache.clear();
+                }
+                return respond({ message: `Cache cleared: ${cacheType}` });
+            }
+            case 'list_templates': {
+                const templates = listTemplates();
+                return respond({
+                    count: templates.length,
+                    templates: templates.map(t => ({
+                        id: t.id,
+                        name: t.name,
+                        description: t.description,
+                        icon: t.icon,
+                    })),
+                });
+            }
+            case 'create_from_template': {
+                const templateId = args?.templateId;
+                const title = args?.title;
+                const parentPageId = args?.parentPageId;
+                const parentDatabaseId = args?.parentDatabaseId;
+                const template = getTemplate(templateId);
+                if (!template) {
+                    return error(`Unknown template: ${templateId}. Use list_templates to see available options.`);
+                }
+                if (!parentPageId && !parentDatabaseId) {
+                    return error('Either parentPageId or parentDatabaseId is required');
+                }
+                const parent = parentDatabaseId
+                    ? { database_id: parsePageId(parentDatabaseId) }
+                    : { page_id: parsePageId(parentPageId) };
+                const properties = parentDatabaseId
+                    ? { title: { title: [{ text: { content: title } }] } }
+                    : { title: { title: [{ text: { content: title } }] } };
+                const page = await withRetry(() => notion.pages.create({
+                    parent,
+                    icon: template.icon ? { emoji: template.icon } : undefined,
+                    properties,
+                }), 3, 'create_from_template');
+                // Add template blocks
+                if (template.blocks.length > 0) {
+                    await appendBlocksInBatches(page.id, template.blocks);
+                }
+                return respond({
+                    id: page.id,
+                    url: page.url,
+                    template: templateId,
+                    message: `Page created from template: ${template.name}`,
+                });
+            }
+            case 'batch_create_pages': {
+                const parentId = parsePageId(args?.parentId);
+                const pages = args?.pages;
+                if (!pages || pages.length === 0) {
+                    return error('No pages provided');
+                }
+                const result = await batchCreatePages(parentId, pages);
+                return respond({
+                    ...result,
+                    message: `Created ${result.successful}/${pages.length} pages`,
+                });
+            }
+            case 'batch_archive_pages': {
+                const pageIds = args?.pageIds;
+                if (!pageIds || pageIds.length === 0) {
+                    return error('No page IDs provided');
+                }
+                const result = await batchArchivePages(pageIds.map(parsePageId));
+                return respond({
+                    ...result,
+                    message: `Archived ${result.successful}/${pageIds.length} pages`,
+                });
+            }
+            case 'batch_delete_blocks': {
+                const blockIds = args?.blockIds;
+                if (!blockIds || blockIds.length === 0) {
+                    return error('No block IDs provided');
+                }
+                const result = await batchDeleteBlocks(blockIds);
+                return respond({
+                    ...result,
+                    message: `Deleted ${result.successful}/${blockIds.length} blocks`,
+                });
+            }
+            case 'validate_properties': {
+                const databaseId = parsePageId(args?.databaseId);
+                const properties = args?.properties;
+                // Get database schema (with caching)
+                const cacheKey = `schema:${databaseId}`;
+                let schema = schemaCache.get(cacheKey);
+                if (!schema) {
+                    const db = await withRetry(() => notion.databases.retrieve({ database_id: databaseId }), 3, 'validate_get_schema');
+                    schema = db.properties;
+                    schemaCache.set(cacheKey, schema, 600);
+                }
+                const validation = validatePropertiesAgainstSchema(properties, schema);
+                return respond(validation);
+            }
+            case 'get_queue_status': {
+                return respond({
+                    queueSize: offlineQueue.getQueueSize(),
+                    operations: offlineQueue.getQueuedOperations(),
+                });
+            }
+            case 'clear_queue': {
+                offlineQueue.clearQueue();
+                return respond({ message: 'Offline queue cleared' });
+            }
             default:
                 return error(`Unknown tool: ${name}`);
         }
@@ -1037,7 +1715,7 @@ async function main() {
     await initialize();
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error('Notion MCP Server v2.0 running');
+    console.error('Notion MCP Server v2.8 running - Full-featured with caching, metrics, templates');
 }
 main().catch(err => {
     console.error('Fatal:', err);

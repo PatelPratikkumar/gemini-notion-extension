@@ -593,4 +593,189 @@ export const tools = [
       },
     },
   },
+
+  // ==================== ADVANCED OPERATIONS ====================
+  {
+    name: 'health_check',
+    description: 'Check Notion API connectivity, cache status, and system health.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_metrics',
+    description: 'Get API call metrics including counts, latency, and error rates.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        operation: {
+          type: 'string',
+          description: 'Filter by specific operation name (optional)',
+        },
+      },
+    },
+  },
+  {
+    name: 'get_logs',
+    description: 'Retrieve recent operation logs for debugging.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        count: {
+          type: 'number',
+          description: 'Number of log entries (default: 50)',
+        },
+        level: {
+          type: 'string',
+          enum: ['debug', 'info', 'warn', 'error'],
+          description: 'Minimum log level to include',
+        },
+        operation: {
+          type: 'string',
+          description: 'Filter by operation name',
+        },
+      },
+    },
+  },
+  {
+    name: 'clear_cache',
+    description: 'Clear cached data. Use when you need fresh data from Notion.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['schemas', 'lists', 'pages', 'users', 'all'],
+          description: 'Cache type to clear (default: all)',
+        },
+      },
+    },
+  },
+  {
+    name: 'list_templates',
+    description: 'List available page templates.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'create_from_template',
+    description: 'Create a new page using a template.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        templateId: {
+          type: 'string',
+          enum: ['meeting-notes', 'project-brief', 'daily-standup', 'bug-report', 'code-review'],
+          description: 'Template to use',
+        },
+        title: {
+          type: 'string',
+          description: 'Page title',
+        },
+        parentPageId: {
+          type: 'string',
+          description: 'Parent page ID',
+        },
+        parentDatabaseId: {
+          type: 'string',
+          description: 'Parent database ID (alternative to parentPageId)',
+        },
+      },
+      required: ['templateId', 'title'],
+    },
+  },
+  {
+    name: 'batch_create_pages',
+    description: 'Create multiple pages at once.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        parentId: {
+          type: 'string',
+          description: 'Parent page or database ID',
+        },
+        pages: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              content: { type: 'string' },
+              properties: { type: 'object' },
+            },
+            required: ['title'],
+          },
+          description: 'Array of pages to create',
+        },
+      },
+      required: ['parentId', 'pages'],
+    },
+  },
+  {
+    name: 'batch_archive_pages',
+    description: 'Archive multiple pages at once.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of page IDs to archive',
+        },
+      },
+      required: ['pageIds'],
+    },
+  },
+  {
+    name: 'batch_delete_blocks',
+    description: 'Delete multiple blocks at once.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blockIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of block IDs to delete',
+        },
+      },
+      required: ['blockIds'],
+    },
+  },
+  {
+    name: 'validate_properties',
+    description: 'Validate properties against a database schema before creating/updating.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        databaseId: {
+          type: 'string',
+          description: 'Database ID to validate against',
+        },
+        properties: {
+          type: 'object',
+          description: 'Properties to validate',
+        },
+      },
+      required: ['databaseId', 'properties'],
+    },
+  },
+  {
+    name: 'get_queue_status',
+    description: 'Get status of offline operation queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'clear_queue',
+    description: 'Clear all queued offline operations.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];

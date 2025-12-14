@@ -134,6 +134,195 @@ async function withRetry<T>(
 }
 
 // ============================================================
+// AUTO-PAGINATION (for >100 items)
+// ============================================================
+
+/**
+ * Paginate through all results from a database query
+ * Notion API returns max 100 items per request
+ */
+async function paginateQuery(
+  databaseId: string,
+  filter?: any,
+  sorts?: any,
+  maxItems: number = 1000
+): Promise<any[]> {
+  const allResults: any[] = [];
+  let hasMore = true;
+  let startCursor: string | undefined = undefined;
+
+  while (hasMore && allResults.length < maxItems) {
+    const response = await withRetry(
+      () => notion.databases.query({
+        database_id: databaseId,
+        filter,
+        sorts,
+        page_size: 100,
+        start_cursor: startCursor,
+      }),
+      3,
+      'paginate_query'
+    );
+
+    allResults.push(...response.results);
+    hasMore = response.has_more;
+    startCursor = response.next_cursor || undefined;
+
+    // Log progress for large queries
+    if (allResults.length >= 100) {
+      console.error(`[Pagination] Fetched ${allResults.length} items...`);
+    }
+  }
+
+  return allResults;
+}
+
+/**
+ * Paginate through all block children
+ */
+async function paginateBlockChildren(
+  blockId: string,
+  maxBlocks: number = 500
+): Promise<any[]> {
+  const allBlocks: any[] = [];
+  let hasMore = true;
+  let startCursor: string | undefined = undefined;
+
+  while (hasMore && allBlocks.length < maxBlocks) {
+    const response = await withRetry(
+      () => notion.blocks.children.list({
+        block_id: blockId,
+        page_size: 100,
+        start_cursor: startCursor,
+      }),
+      3,
+      'paginate_blocks'
+    );
+
+    allBlocks.push(...response.results);
+    hasMore = response.has_more;
+    startCursor = response.next_cursor || undefined;
+  }
+
+  return allBlocks;
+}
+
+// ============================================================
+// LARGE CONTENT CHUNKING (for >50KB content)
+// ============================================================
+
+const MAX_RICH_TEXT_LENGTH = 2000; // Notion limit per block
+const MAX_CHUNK_SIZE = 50000; // 50KB per chunk for safety
+
+/**
+ * Split large content into chunks for Notion
+ * Each chunk becomes a separate code block or set of paragraphs
+ */
+function chunkContent(content: string, chunkSize: number = MAX_CHUNK_SIZE): string[] {
+  if (content.length <= chunkSize) {
+    return [content];
+  }
+
+  const chunks: string[] = [];
+  let remaining = content;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= chunkSize) {
+      chunks.push(remaining);
+      break;
+    }
+
+    // Try to split at a natural boundary (newline, paragraph)
+    let splitIndex = remaining.lastIndexOf('\n\n', chunkSize);
+    if (splitIndex === -1 || splitIndex < chunkSize * 0.5) {
+      splitIndex = remaining.lastIndexOf('\n', chunkSize);
+    }
+    if (splitIndex === -1 || splitIndex < chunkSize * 0.5) {
+      splitIndex = chunkSize;
+    }
+
+    chunks.push(remaining.slice(0, splitIndex));
+    remaining = remaining.slice(splitIndex).trimStart();
+  }
+
+  return chunks;
+}
+
+/**
+ * Create blocks from large content, auto-chunking as needed
+ */
+function createChunkedBlocks(content: string, blockType: 'paragraph' | 'code' = 'paragraph'): any[] {
+  const blocks: any[] = [];
+  
+  if (blockType === 'code') {
+    // Code blocks can hold 100KB, but we chunk at 50KB for safety
+    const chunks = chunkContent(content, MAX_CHUNK_SIZE);
+    for (let i = 0; i < chunks.length; i++) {
+      blocks.push({
+        object: 'block',
+        type: 'code',
+        code: {
+          language: 'plain text',
+          rich_text: [{ type: 'text', text: { content: chunks[i] } }],
+        },
+      });
+      
+      // Add part indicator if multiple chunks
+      if (chunks.length > 1 && i < chunks.length - 1) {
+        blocks.push({
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [{ type: 'text', text: { content: `--- Part ${i + 1} of ${chunks.length} ---` } }],
+          },
+        });
+      }
+    }
+  } else {
+    // Paragraphs are limited to 2000 chars per rich_text
+    const chunks = chunkContent(content, MAX_RICH_TEXT_LENGTH);
+    for (const chunk of chunks) {
+      blocks.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [{ type: 'text', text: { content: chunk } }],
+        },
+      });
+    }
+  }
+
+  return blocks;
+}
+
+/**
+ * Append blocks in batches (max 100 blocks per request)
+ */
+async function appendBlocksInBatches(
+  pageId: string,
+  blocks: any[],
+  batchSize: number = 100
+): Promise<void> {
+  for (let i = 0; i < blocks.length; i += batchSize) {
+    const batch = blocks.slice(i, i + batchSize);
+    
+    await withRetry(
+      () => notion.blocks.children.append({
+        block_id: pageId,
+        children: batch,
+      }),
+      3,
+      `append_blocks_batch_${Math.floor(i / batchSize) + 1}`
+    );
+
+    // Log progress for large appends
+    if (blocks.length > batchSize) {
+      console.error(`[Batch Append] ${Math.min(i + batchSize, blocks.length)}/${blocks.length} blocks`);
+    }
+  }
+}
+
+// ============================================================
 
 /**
  * Load database IDs from cache file
@@ -467,12 +656,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         
         let content: any[] = [];
         if (args?.includeContent !== false) {
-          const blocks = await withRetry(
-            () => notion.blocks.children.list({ block_id: pageId, page_size: 100 }),
-            3,
-            'get_page_blocks'
-          );
-          content = blocks.results;
+          // Use pagination for large pages
+          content = await paginateBlockChildren(pageId, 500);
         }
         
         return respond({ page, content });
@@ -543,6 +728,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'query_database': {
         const dbId = resolveDatabaseId(args?.databaseId as string);
+        const limit = (args?.limit as number) || 100;
         
         // Process sorts - support both property and timestamp sorts
         let processedSorts = args?.sorts as any;
@@ -557,18 +743,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           });
         }
         
-        const results = await withRetry(
-          () => notion.databases.query({
-            database_id: dbId,
-            filter: args?.filter as any,
-            sorts: processedSorts,
-            page_size: (args?.limit as number) || 100,
-          }),
-          3,
-          'query_database'
-        );
+        // Use pagination for large queries (>100 items)
+        let results: any[];
+        if (limit > 100) {
+          results = await paginateQuery(dbId, args?.filter, processedSorts, limit);
+        } else {
+          const response = await withRetry(
+            () => notion.databases.query({
+              database_id: dbId,
+              filter: args?.filter as any,
+              sorts: processedSorts,
+              page_size: limit,
+            }),
+            3,
+            'query_database'
+          );
+          results = response.results;
+        }
         
-        const formatted = formatDatabaseResults(results.results);
+        const formatted = formatDatabaseResults(results);
         return respond({ count: formatted.length, results: formatted });
       }
 
@@ -737,17 +930,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'append_blocks': {
         const parentId = parsePageId(args?.parentId as string);
-        const blocks = args?.blocks as any[] || 
-          (args?.content ? markdownToBlocks(args.content as string) : []);
+        let blocks = args?.blocks as any[] || [];
+        
+        // Handle large content with auto-chunking
+        if (args?.content) {
+          const content = args.content as string;
+          if (content.length > 50000) {
+            // Use chunking for large content
+            blocks = createChunkedBlocks(content, 'paragraph');
+          } else {
+            blocks = markdownToBlocks(content);
+          }
+        }
         
         if (blocks.length === 0) {
           return error('No content or blocks provided');
         }
         
-        const result = await notion.blocks.children.append({
+        // Use batch appending for large block counts
+        if (blocks.length > 100) {
+          const totalAdded = await appendBlocksInBatches(parentId, blocks);
+          return respond({ blocksAdded: totalAdded, message: `Content appended in ${Math.ceil(blocks.length / 100)} batches` });
+        }
+        
+        const result = await withRetry(() => notion.blocks.children.append({
           block_id: parentId,
           children: blocks,
-        });
+        }), 3, 'append_blocks');
         
         return respond({ blocksAdded: result.results.length, message: 'Content appended' });
       }

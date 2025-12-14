@@ -10133,6 +10133,117 @@ async function withRetry(operation, maxRetries = 3, operationName = "API call") 
   }
   throw lastError || new Error(`${operationName} failed after ${maxRetries + 1} attempts`);
 }
+async function paginateQuery(databaseId, filter, sorts, maxItems = 1e3) {
+  const allResults = [];
+  let hasMore = true;
+  let startCursor = void 0;
+  while (hasMore && allResults.length < maxItems) {
+    const response = await withRetry(() => notion.databases.query({
+      database_id: databaseId,
+      filter,
+      sorts,
+      page_size: 100,
+      start_cursor: startCursor
+    }), 3, "paginate_query");
+    allResults.push(...response.results);
+    hasMore = response.has_more;
+    startCursor = response.next_cursor || void 0;
+    if (allResults.length >= 100) {
+      console.error(`[Pagination] Fetched ${allResults.length} items...`);
+    }
+  }
+  return allResults;
+}
+async function paginateBlockChildren(blockId, maxBlocks = 500) {
+  const allBlocks = [];
+  let hasMore = true;
+  let startCursor = void 0;
+  while (hasMore && allBlocks.length < maxBlocks) {
+    const response = await withRetry(() => notion.blocks.children.list({
+      block_id: blockId,
+      page_size: 100,
+      start_cursor: startCursor
+    }), 3, "paginate_blocks");
+    allBlocks.push(...response.results);
+    hasMore = response.has_more;
+    startCursor = response.next_cursor || void 0;
+  }
+  return allBlocks;
+}
+var MAX_RICH_TEXT_LENGTH = 2e3;
+var MAX_CHUNK_SIZE = 5e4;
+function chunkContent(content, chunkSize = MAX_CHUNK_SIZE) {
+  if (content.length <= chunkSize) {
+    return [content];
+  }
+  const chunks = [];
+  let remaining = content;
+  while (remaining.length > 0) {
+    if (remaining.length <= chunkSize) {
+      chunks.push(remaining);
+      break;
+    }
+    let splitIndex = remaining.lastIndexOf("\n\n", chunkSize);
+    if (splitIndex === -1 || splitIndex < chunkSize * 0.5) {
+      splitIndex = remaining.lastIndexOf("\n", chunkSize);
+    }
+    if (splitIndex === -1 || splitIndex < chunkSize * 0.5) {
+      splitIndex = chunkSize;
+    }
+    chunks.push(remaining.slice(0, splitIndex));
+    remaining = remaining.slice(splitIndex).trimStart();
+  }
+  return chunks;
+}
+function createChunkedBlocks(content, blockType = "paragraph") {
+  const blocks = [];
+  if (blockType === "code") {
+    const chunks = chunkContent(content, MAX_CHUNK_SIZE);
+    for (let i = 0; i < chunks.length; i++) {
+      blocks.push({
+        object: "block",
+        type: "code",
+        code: {
+          language: "plain text",
+          rich_text: [{ type: "text", text: { content: chunks[i] } }]
+        }
+      });
+      if (chunks.length > 1 && i < chunks.length - 1) {
+        blocks.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ type: "text", text: { content: `--- Part ${i + 1} of ${chunks.length} ---` } }]
+          }
+        });
+      }
+    }
+  } else {
+    const chunks = chunkContent(content, MAX_RICH_TEXT_LENGTH);
+    for (const chunk of chunks) {
+      blocks.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [{ type: "text", text: { content: chunk } }]
+        }
+      });
+    }
+  }
+  return blocks;
+}
+async function appendBlocksInBatches(pageId, blocks, batchSize = 100) {
+  for (let i = 0; i < blocks.length; i += batchSize) {
+    const batch = blocks.slice(i, i + batchSize);
+    await withRetry(() => notion.blocks.children.append({
+      block_id: pageId,
+      children: batch
+    }), 3, `append_blocks_batch_${Math.floor(i / batchSize) + 1}`);
+    if (blocks.length > batchSize) {
+      console.error(`[Batch Append] ${Math.min(i + batchSize, blocks.length)}/${blocks.length} blocks`);
+    }
+  }
+}
 function loadDatabaseCache() {
   const possiblePaths = [
     join(PROJECT_ROOT, ".notion-cache.json"),
@@ -10369,8 +10480,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const page = await withRetry(() => notion.pages.retrieve({ page_id: pageId }), 3, "get_page");
         let content = [];
         if (args?.includeContent !== false) {
-          const blocks = await withRetry(() => notion.blocks.children.list({ block_id: pageId, page_size: 100 }), 3, "get_page_blocks");
-          content = blocks.results;
+          content = await paginateBlockChildren(pageId, 500);
         }
         return respond({ page, content });
       }
@@ -10419,6 +10529,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "query_database": {
         const dbId = resolveDatabaseId(args?.databaseId);
+        const limit = args?.limit || 100;
         let processedSorts = args?.sorts;
         if (processedSorts) {
           processedSorts = processedSorts.map((sort) => {
@@ -10428,13 +10539,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return { property: sort.property, direction: sort.direction || "ascending" };
           });
         }
-        const results = await withRetry(() => notion.databases.query({
-          database_id: dbId,
-          filter: args?.filter,
-          sorts: processedSorts,
-          page_size: args?.limit || 100
-        }), 3, "query_database");
-        const formatted = formatDatabaseResults(results.results);
+        let results;
+        if (limit > 100) {
+          results = await paginateQuery(dbId, args?.filter, processedSorts, limit);
+        } else {
+          const response = await withRetry(() => notion.databases.query({
+            database_id: dbId,
+            filter: args?.filter,
+            sorts: processedSorts,
+            page_size: limit
+          }), 3, "query_database");
+          results = response.results;
+        }
+        const formatted = formatDatabaseResults(results);
         return respond({ count: formatted.length, results: formatted });
       }
       case "create_database": {
@@ -10561,14 +10678,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "append_blocks": {
         const parentId = parsePageId(args?.parentId);
-        const blocks = args?.blocks || (args?.content ? markdownToBlocks(args.content) : []);
+        let blocks = args?.blocks || [];
+        if (args?.content) {
+          const content = args.content;
+          if (content.length > 5e4) {
+            blocks = createChunkedBlocks(content, "paragraph");
+          } else {
+            blocks = markdownToBlocks(content);
+          }
+        }
         if (blocks.length === 0) {
           return error("No content or blocks provided");
         }
-        const result = await notion.blocks.children.append({
+        if (blocks.length > 100) {
+          const totalAdded = await appendBlocksInBatches(parentId, blocks);
+          return respond({ blocksAdded: totalAdded, message: `Content appended in ${Math.ceil(blocks.length / 100)} batches` });
+        }
+        const result = await withRetry(() => notion.blocks.children.append({
           block_id: parentId,
           children: blocks
-        });
+        }), 3, "append_blocks");
         return respond({ blocksAdded: result.results.length, message: "Content appended" });
       }
       case "update_block": {

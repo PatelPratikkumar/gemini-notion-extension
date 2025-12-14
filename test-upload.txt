@@ -1,4 +1,0 @@
-Test file for Notion upload
-Created: 2025-12-14T05:22:24.903Z
-Purpose: Testing enhanced Notion API capabilities
-Research: Based on 2024 file upload API updates

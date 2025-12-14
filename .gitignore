@@ -22,6 +22,16 @@ research/
 # Private test scripts (local development only)
 tests/
 
+# Test files with API keys and internal logic (NEVER COMMIT)
+*test*.js
+*test*.cjs
+*test*.ts
+api-test.*
+test-*
+*-test.*
+test-upload.*
+*-api-*
+
 # Local cache
 .local/
 .notion-cache.json

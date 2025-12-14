@@ -12,6 +12,8 @@
     "build": "tsc && npm run bundle",
     "bundle": "esbuild dist/server.js --bundle --platform=node --target=node18 --format=esm --outfile=dist/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "start": "node dist/bundle.js",
+    "test": "tsx tests/run-tests.ts",
+    "test:quick": "tsx tests/quick-test.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "rebuild": "npm run clean && npm run build"

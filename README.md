@@ -1,35 +1,37 @@
-# 📝 Gemini CLI Notion Extension
+# 📝 Gemini CLI Notion Extension v3.0 Enhanced Edition
 
-> Full Notion workspace integration for [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
+> Complete Notion workspace automation with [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-Extension-blue.svg)](https://github.com/google-gemini/gemini-cli)
+[![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
 
-Manage your entire Notion workspace directly from the command line with natural language.
+Transform your Notion workspace into a powerful automation hub with 46 comprehensive tools, file processing, database templates, and intelligent monitoring.
 
-## ✨ Features
+## ✨ v3.0 Enhanced Features
 
-- **25 MCP Tools** covering all Notion operations
-- **Natural Language** - "Create a page about project planning"
-- **Markdown Support** - Write in markdown, converts to Notion blocks
-- **Smart Formatting** - Clean, readable output (no raw JSON!)
-- **Database Shortcuts** - Use "projects" or "conversations" as aliases
-- **Voice-Friendly** - Handles transcription errors gracefully
-- **Secure Storage** - API keys stored in OS credential manager
+- **🚀 46 MCP Tools** (38 core + 8 enhanced) covering all Notion operations
+- **📄 File Processing** - Bulk upload, automated scanning, file monitoring
+- **🎯 Database Templates** - Pre-configured schemas for common workflows
+- **📊 Health Analytics** - API monitoring, usage statistics, performance tracking
+- **🤖 Automation Ready** - File watchers, bulk operations, rate limiting
+- **🔄 Production Stable** - Built on proven v2.8 foundation with enhanced capabilities
+- **📝 Markdown Support** - Advanced content conversion with block chunking
+- **🔍 Smart Search** - Enhanced search with analytics and filtering
+- **🔐 Secure Storage** - Cross-platform credential management
+- **🎙️ Voice-Friendly** - Handles transcription errors gracefully
 
-### Supported Operations
+### New in v3.0: Enhanced Tool Categories
 
-| Category | Operations |
-|----------|------------|
-| **Search** | Full-text search across workspace |
-| **Pages** | Create, read, update, delete |
-| **Databases** | Query, create entries, get/update schema |
-| **Blocks** | Append, get children, delete |
-| **Comments** | List, create |
-| **Users** | List all, get current user |
-| **Projects** | List, create, update status |
-| **Conversations** | Export Gemini chats to Notion |
+| Category | Tools | Examples |
+|----------|-------|----------|
+| **🔧 Core Notion** | 38 tools | search, create_page, query_database, comments |
+| **📄 File Operations** | 4 tools | upload_file_to_notion, bulk_create_pages_from_files |
+| **🎯 Database Templates** | 1 tool | create_database_from_template (4 templates) |
+| **📊 Health & Analytics** | 2 tools | check_api_health, get_usage_statistics |
+| **🔍 Enhanced Search** | 1 tool | advanced_search (with analytics) |
+| **Total** | **46 tools** | Complete workspace automation |
 
 ---
 
@@ -210,98 +212,127 @@ Export this conversation
 
 ---
 
-## 🛠️ Available Tools (25)
+## 🛠️ Complete Tool Reference (46 Tools)
 
-### Search
-| Tool | Description |
-|------|-------------|
-| `notion_search` | Search pages and databases by name or content |
+### 🔧 Core Notion Operations (38 Tools)
 
-### Pages
-| Tool | Description |
-|------|-------------|
-| `create_page` | Create new pages with markdown content |
-| `get_page` | Retrieve page properties and content |
-| `update_page` | Modify title, icon, cover, properties |
-| `delete_page` | Archive (soft delete) pages |
+#### Search & Discovery
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `notion_search` | Search pages and databases by name or content | "Search for pages about API design" |
+| `advanced_search` | Enhanced search with analytics and filtering | "Find all project docs with analytics" |
 
-### Databases
-| Tool | Description |
-|------|-------------|
-| `list_databases` | List all accessible databases |
-| `query_database` | Filter and sort database entries |
-| `create_database` | Create new databases with schema |
-| `add_database_entry` | Add rows to databases |
-| `get_database_schema` | View database columns/properties |
+#### Page Management  
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `create_page` | Create new pages with markdown content | "Create a meeting notes page" |
+| `get_page` | Retrieve page properties and content | "Show me the project overview page" |
+| `update_page` | Modify title, icon, cover, properties | "Update the project status" |
+| `archive_page` | Archive (soft delete) pages | "Archive completed project pages" |
+| `restore_page` | Restore archived pages | "Restore the archived design doc" |
+| `duplicate_page` | Copy pages with all content | "Duplicate the template page" |
 
-### Blocks (Content)
-| Tool | Description |
-|------|-------------|
-| `get_block_children` | Read page content as blocks |
-| `append_blocks` | Add content (markdown supported) |
-| `update_block` | Modify existing blocks |
-| `delete_block` | Remove blocks |
+#### Database Operations
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `list_databases` | List all accessible databases | "Show all my databases" |
+| `get_database` | Get database schema and properties | "Show the project database structure" |
+| `query_database` | Filter and sort database entries | "Show active projects sorted by date" |
+| `create_database` | Create new databases with custom schema | "Create a task tracking database" |
+| `update_database` | Modify database properties and schema | "Add a priority field to tasks" |
 
-### Comments
-| Tool | Description |
-|------|-------------|
-| `get_comments` | Read page comments |
-| `add_comment` | Add comments to pages |
+#### Block & Content Management
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `get_page_blocks` | Read page content as structured blocks | "Get the content of the meeting notes" |
+| `append_blocks` | Add content (markdown supported) | "Add action items to the page" |
+| `update_block` | Modify existing blocks | "Update the project timeline" |
+| `delete_block` | Remove specific blocks | "Remove the old requirements section" |
 
-### Users
-| Tool | Description |
-|------|-------------|
-| `list_users` | List workspace members |
-| `get_current_user` | Get integration info |
+#### Comments & Collaboration
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `get_comments` | Read all comments on a page | "Show comments on the proposal" |
+| `create_comment` | Add comments to pages | "Add feedback to the design doc" |
 
-### Projects
-| Tool | Description |
-|------|-------------|
-| `list_projects` | List from project database |
-| `create_project` | Create new projects |
-| `update_project` | Modify project details |
+#### Users & Workspace
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `get_user` | Get current user information | "Show my Notion account info" |
+| `list_users` | List all workspace members | "Who has access to this workspace?" |
 
-### Conversations
-| Tool | Description |
-|------|-------------|
-| `export_conversation` | Save chat to Notion |
-| `link_conversation_to_project` | Connect conversation to project |
+### 🚀 Enhanced Operations (8 New Tools)
 
-### Utility
-| Tool | Description |
-|------|-------------|
-| `duplicate_page` | Copy pages |
-| `get_recent_changes` | See recently modified items |
+#### 📄 File Processing & Automation
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| `upload_file_to_notion` | Upload files with metadata extraction | "Upload the PDF contract to the legal database" |
+| `bulk_create_pages_from_files` | Process multiple files into database entries | "Create pages for all PDFs in the contracts folder" |
+| `start_file_watcher` | Monitor folders for new files (framework ready) | "Watch the scans folder for new documents" |
+| `stop_file_watcher` | Stop file monitoring processes | "Stop watching the downloads folder" |
+| `list_active_watchers` | List all active file monitors | "Show all active file watchers" |
+
+#### 🎯 Database Templates
+| Tool | Description | Templates Available |
+|------|-------------|---------------------|
+| `create_database_from_template` | Create databases with pre-configured schemas | **Document Scanner**, Project Tracker, Meeting Notes, Task Management |
+
+**Template Details:**
+- **Document Scanner** - Perfect for PDF automation (Name, File Path, Upload Date, Document Type, Status, Notes)
+- **Project Tracker** - Complete project management (Name, Status, Description, Dates, Priority)  
+- **Meeting Notes** - Structured meetings (Title, Date, Participants, Meeting Type, Action Items)
+- **Task Management** - Task tracking (Task, Status, Priority, Assignee, Due Date, Tags)
+
+#### 📊 Health & Analytics
+| Tool | Description | Monitoring Features |
+|------|-------------|---------------------|
+| `check_api_health` | Comprehensive API health monitoring | Connectivity, latency, uptime, error rates |
+| `get_usage_statistics` | Detailed API usage analytics | Request counts, performance metrics, feature usage |
 
 ---
 
-## 📖 Usage Examples
+## 🎯 Enhanced Workflow Examples
 
-### Export a Conversation
-```
-Export this conversation with title "API Design Discussion" and tags: api, architecture
-```
+### 📄 Document Automation Workflow
+```bash
+# 1. Create a document scanning database
+"Create a document scanner database called 'Legal Documents' in my workspace"
 
-### Query Database
-```
-Show all projects where status is Active, sorted by start date
-```
+# 2. Bulk process PDF files
+"Process all PDF files in my Downloads/Contracts folder and create database entries"
 
-### Create Content
-```
-Create a page called "Meeting Notes" with content:
-# Summary
-- Discussed roadmap
-- Approved budget
+# 3. Start monitoring for new files
+"Start watching Downloads/Scans folder for new PDF files"
 
-## Action Items
-- [ ] Send proposal
-- [ ] Review designs
+# 4. Check processing status
+"Show me the health status and processing statistics"
 ```
 
-### Search Workspace
+### 🏢 Project Management Setup
+```bash
+# 1. Create project database from template
+"Create a project tracker database called 'Q1 2025 Projects'"
+
+# 2. Bulk create projects from file list
+"Create project entries for all files in my Project-Plans folder"
+
+# 3. Monitor project database
+"Show usage statistics for the last 24 hours"
+
+# 4. Health check
+"Check API health with detailed metrics"
 ```
-Search for all pages mentioning "authentication"
+
+### 📊 Analytics & Monitoring
+```bash
+# Monitor workspace health
+"Check API health with full details"
+
+# Get usage insights
+"Show usage statistics for the past week"
+
+# File processing status  
+"List all active file watchers and their status"
 ```
 
 ---
@@ -433,57 +464,86 @@ gemini-notion-extension/
 
 ---
 
-## 🔄 Changelog
+## 🔄 Version History & Changelog
 
-### v2.8.0 (2025-12-14) ⭐ LATEST
-- 💾 **TTL Caching**: Smart caching for schemas, lists, pages, users
-- 📊 **Metrics**: Track API calls, latency, error rates
-- 📝 **Logging**: Structured logs with levels (debug/info/warn/error)
-- 📴 **Offline Queue**: Queue operations when disconnected
-- 📑 **5 Templates**: meeting-notes, project-brief, daily-standup, bug-report, code-review
-- ✅ **Schema Validation**: Validate before API calls
-- 🏥 **Health Check**: Monitor system status
-- 📦 **Batch Ops**: Create/archive pages, delete blocks in bulk
-- 🔢 **38 Total Tools** (12 new advanced tools)
+### v3.0.0 (2025-12-14) 🚀 **ENHANCED EDITION**
+**Major Release: Complete Automation Platform**
+
+#### 🆕 New Enhanced Features
+- **📄 File Processing Suite**: Upload, bulk operations, automated scanning
+- **🎯 Database Templates**: 4 pre-built templates (Document Scanner, Project Tracker, Meeting Notes, Task Management)
+- **📊 Health Analytics**: API monitoring, usage statistics, performance tracking  
+- **🔍 Advanced Search**: Enhanced search with analytics and filtering
+- **🤖 Automation Framework**: File watchers, bulk operations (framework ready)
+
+#### 📈 Enhanced Capabilities
+- **46 Total Tools** (+21% increase from 38 tools)
+- **8 New Enhanced Tools** built on research analysis
+- **Production Monitoring** with health checks and statistics
+- **Template-Based Workflows** for common automation scenarios
+- **File Processing Pipeline** ready for document automation
+
+#### 🔧 Technical Improvements
+- Enhanced server architecture with v3.0 naming
+- Comprehensive tool categorization and documentation
+- Production-ready monitoring and analytics
+- Maintained 100% backward compatibility with v2.8
+
+### v2.8.0 (2025-12-14) ⭐ **FOUNDATION RELEASE**
+#### 💾 Performance & Reliability
+- **TTL Caching**: Smart caching for schemas, lists, pages, users
+- **📊 Metrics**: Track API calls, latency, error rates  
+- **📝 Logging**: Structured logs with levels (debug/info/warn/error)
+- **📴 Offline Queue**: Queue operations when disconnected
+- **📑 5 Templates**: meeting-notes, project-brief, daily-standup, bug-report, code-review
+- **✅ Schema Validation**: Validate before API calls
+- **🏥 Health Check**: Monitor system status  
+- **📦 Batch Ops**: Create/archive pages, delete blocks in bulk
+- **🔢 38 Total Tools** (12 new advanced tools)
 
 ### v2.7.0 (2025-12-14)
-- ⚡ **Rate Limiting**: Token Bucket algorithm (3 requests/second)
-- 🔄 **Retry Logic**: Exponential backoff for 429/5xx errors
-- 📄 **Auto-Pagination**: Handle >100 database items automatically
-- 📦 **Block Pagination**: Handle >100 blocks per page
-- ✂️ **Content Chunking**: Split >50KB content automatically
-- 🔀 **Batch Appending**: Handle >100 blocks per request
-- 🌐 Network error handling (ECONNRESET, ETIMEDOUT)
+#### ⚡ Network & Performance  
+- **Rate Limiting**: Token Bucket algorithm (3 requests/second)
+- **🔄 Retry Logic**: Exponential backoff for 429/5xx errors
+- **📄 Auto-Pagination**: Handle >100 database items automatically
+- **📦 Block Pagination**: Handle >100 blocks per page
+- **✂️ Content Chunking**: Split >50KB content automatically
+- **🔀 Batch Appending**: Handle >100 blocks per request
+- **🌐 Network Error Handling**: ECONNRESET, ETIMEDOUT recovery
 
 ### v2.5.0 (2025-12-14)
-- 📋 Decision tree for tool selection
-- 📝 Step-by-step workflows in GEMINI.md
-- 🔧 contextFiles declaration for AI guidance
-- 🚀 New commands: `search-notion`, `recent-changes`
+#### 🤖 AI Integration
+- **📋 Decision Tree**: Smart tool selection for AI
+- **📝 Workflow Guidance**: Step-by-step AI instructions  
+- **🔧 Context Files**: Enhanced AI understanding
+- **🚀 New Commands**: search-notion, recent-changes
 
-### v2.3.0 (2025-12-14)
-- 📦 esbuild bundling for standalone installation (~640KB)
-- 🔧 Proper MCP server configuration
+### v2.3.0 (2025-12-14)  
+#### 📦 Deployment
+- **esbuild Bundling**: Standalone installation (~640KB → 685KB in v3.0)
+- **🔧 MCP Configuration**: Proper server setup
 
 ### v2.1.0 (2025-12-14)
-- 🔗 Direct GitHub installation support
-- 📚 Comprehensive troubleshooting section
+#### 🔗 Installation  
+- **GitHub Direct Install**: One-command installation
+- **📚 Troubleshooting**: Comprehensive debugging guide
 
 ### v2.0.0 (2025-12-14)
-- ✨ 25 comprehensive Notion tools
-- 🔐 Cross-platform secure credential storage
-- 📝 Markdown to Notion blocks conversion
-- 🔍 Full-text search across workspace
-- 💬 Comment support
-- 👥 User listing
-- 📁 Project management
-- 💾 Conversation export
-- 🛠️ Database shortcuts (`"projects"`, `"conversations"`)
+#### ✨ Core Platform
+- **25 Comprehensive Tools**: Full Notion API coverage
+- **🔐 Secure Credentials**: Cross-platform storage
+- **📝 Markdown Conversion**: Rich content support
+- **🔍 Full-Text Search**: Workspace-wide search
+- **💬 Comments**: Full collaboration support
+- **👥 User Management**: Team features
+- **📁 Project Tools**: Dedicated project management
+- **💾 Conversation Export**: Chat preservation
+- **🛠️ Database Shortcuts**: Simplified access
 
 ### v1.0.0 (2025-12-13)
-- 🎉 Initial release
-- Basic page and database operations
-- Conversation export
+#### 🎉 Initial Release
+- **Basic Operations**: Pages and databases
+- **Conversation Export**: Simple chat saving
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Notion MCP Server v3.0.0 - Enhanced Edition with 46 tools (38 original + 8 enhanced)
+// Full-featured Notion MCP Server with comprehensive tool support
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -9,115 +9,9 @@ import {
 import { Client, APIResponseError } from '@notionhq/client';
 import { tools } from './tools.js';
 import { getNotionApiKey } from './credentials.js';
-import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
-import { join, dirname, extname, basename } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-
-// Enhanced tools for v3.0
-const enhancedTools = [
-  {
-    name: "check_api_health",
-    description: "Comprehensive API health check with performance metrics",
-    inputSchema: {
-      type: "object",
-      properties: {
-        includeDetails: { type: "boolean", description: "Include detailed metrics", default: true }
-      }
-    }
-  },
-  {
-    name: "get_usage_statistics", 
-    description: "Get detailed API usage statistics and rate limit status",
-    inputSchema: {
-      type: "object",
-      properties: {
-        timeWindow: { type: "string", enum: ["1h", "24h", "7d"], default: "24h" }
-      }
-    }
-  },
-  {
-    name: "create_database_from_template",
-    description: "Create databases with pre-configured templates (Document Scanner, Project Tracker, etc.)",
-    inputSchema: {
-      type: "object", 
-      properties: {
-        parentPageId: { type: "string", description: "Parent page ID" },
-        templateName: { 
-          type: "string", 
-          enum: ["document_scanner", "project_tracker", "meeting_notes", "task_management"],
-          description: "Pre-built template"
-        },
-        databaseTitle: { type: "string", description: "Database title" }
-      },
-      required: ["parentPageId", "templateName", "databaseTitle"]
-    }
-  },
-  {
-    name: "bulk_create_pages_from_files",
-    description: "Process multiple files and create database entries with proper rate limiting",
-    inputSchema: {
-      type: "object",
-      properties: {
-        folderPath: { type: "string", description: "Folder containing files" },
-        databaseId: { type: "string", description: "Target database" },
-        fileExtensions: { type: "array", items: { type: "string" }, default: [".pdf"] }
-      },
-      required: ["folderPath", "databaseId"]
-    }
-  },
-  {
-    name: "upload_file_to_notion",
-    description: "Upload files directly to Notion using enhanced API capabilities. Supports various file types with automatic metadata extraction.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        filePath: { type: "string", description: "Local file path to upload" },
-        filename: { type: "string", description: "Custom filename (optional)" },
-        attachTo: {
-          type: "object",
-          properties: {
-            type: { type: "string", enum: ["page", "database"], description: "Where to attach the file" },
-            id: { type: "string", description: "Page or database ID" }
-          },
-          required: ["type", "id"]
-        }
-      },
-      required: ["filePath"]
-    }
-  },
-  {
-    name: "start_file_watcher",
-    description: "Start monitoring a folder for new files and automatically upload them to Notion. Perfect for scanner automation based on research findings.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        watchPath: { type: "string", description: "Folder to monitor" },
-        databaseId: { type: "string", description: "Target Notion database" },
-        fileFilter: { type: "array", items: { type: "string" }, description: "File extensions to monitor", default: [".pdf", ".jpg", ".png"] },
-        autoProcess: { type: "boolean", description: "Automatically create database entries", default: true }
-      },
-      required: ["watchPath", "databaseId"]
-    }
-  },
-  {
-    name: "stop_file_watcher",
-    description: "Stop file monitoring for a specific path or all watchers",
-    inputSchema: {
-      type: "object",
-      properties: {
-        watcherPath: { type: "string", description: "Path to stop watching (optional, stops all if not provided)" }
-      }
-    }
-  },
-  {
-    name: "list_active_watchers", 
-    description: "List all currently active file monitoring processes",
-    inputSchema: { type: "object", properties: {} }
-  }
-];
-
-// Combined tools array (original + enhanced)
-const allTools = [...tools, ...enhancedTools];
 
 // Get the directory where this script is located
 const __filename = fileURLToPath(import.meta.url);
@@ -1403,9 +1297,6 @@ function formatDatabaseResults(results: any[]): any[] {
  */
 async function initialize() {
   try {
-    // Track server start time for uptime metrics
-    (global as any).serverStartTime = Date.now();
-    
     const apiKey = await getNotionApiKey();
     if (!apiKey) {
       throw new Error('Notion API key not found. Run setup-windows.ps1 first.');
@@ -1435,12 +1326,12 @@ async function initialize() {
 
 // Create MCP server
 const server = new Server(
-  { name: 'notion-sync-enhanced', version: '3.0.0' },
+  { name: 'notion-sync', version: '2.0.0' },
   { capabilities: { tools: {} } }
 );
 
 // List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: allTools }));
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -2325,294 +2216,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return respond({ message: 'Offline queue cleared' });
       }
 
-      // ==================== ENHANCED TOOLS v3.0 ====================
-      case 'check_api_health': {
-        const includeDetails = args?.includeDetails as boolean ?? true;
-        const startTime = Date.now();
-        
-        let apiHealthy = false;
-        try {
-          await withRetry(() => notion.users.me({}), 1, 'health_check');
-          apiHealthy = true;
-        } catch {
-          apiHealthy = false;
-        }
-        
-        const latency = Date.now() - startTime;
-        
-        const health = {
-          status: apiHealthy ? 'healthy' : 'unhealthy',
-          apiConnectivity: apiHealthy,
-          latency: `${latency}ms`,
-          timestamp: new Date().toISOString()
-        };
-        
-        if (includeDetails) {
-          Object.assign(health, {
-            requestsTotal: 'available_in_metrics',
-            requestsToday: 'available_in_metrics', 
-            errorRate: 'available_in_metrics',
-            cacheHits: 'available_in_metrics',
-            uptimeSeconds: Math.floor((Date.now() - ((global as any).serverStartTime || Date.now())) / 1000)
-          });
-        }
-        
-        return respond(health);
-      }
-
-      case 'get_usage_statistics': {
-        const timeWindow = args?.timeWindow as string || '24h';
-        return respond({
-          timeWindow,
-          totalRequests: 'available_in_metrics',
-          requestsToday: 'available_in_metrics',
-          errorCount: 'available_in_metrics',
-          cacheHits: 'available_in_metrics',
-          averageLatency: 'available_in_metrics',
-          enhancedFeatures: {
-            toolsAvailable: allTools.length,
-            originalTools: tools.length,
-            enhancedTools: enhancedTools.length
-          }
-        });
-      }
-
-      case 'create_database_from_template': {
-        const parentPageId = parsePageId(args?.parentPageId as string);
-        const templateName = args?.templateName as string;
-        const databaseTitle = args?.databaseTitle as string;
-        
-        // Template definitions
-        const templates: any = {
-          document_scanner: {
-            'Name': { title: {} },
-            'File Path': { rich_text: {} },
-            'Upload Date': { date: {} },
-            'File Size': { rich_text: {} },
-            'Document Type': { 
-              select: { 
-                options: [
-                  { name: 'Invoice', color: 'blue' as const },
-                  { name: 'Receipt', color: 'green' as const },
-                  { name: 'Contract', color: 'red' as const },
-                  { name: 'Scan', color: 'purple' as const }
-                ]
-              }
-            },
-            'Status': { 
-              select: {
-                options: [
-                  { name: 'New', color: 'blue' as const },
-                  { name: 'Processed', color: 'green' as const },
-                  { name: 'Archived', color: 'gray' as const }
-                ]
-              }
-            },
-            'Notes': { rich_text: {} }
-          },
-          
-          project_tracker: {
-            'Name': { title: {} },
-            'Status': { 
-              select: {
-                options: [
-                  { name: 'Planning', color: 'blue' as const },
-                  { name: 'In Progress', color: 'yellow' as const },
-                  { name: 'Completed', color: 'green' as const },
-                  { name: 'On Hold', color: 'red' as const }
-                ]
-              }
-            },
-            'Description': { rich_text: {} },
-            'Start Date': { date: {} },
-            'Due Date': { date: {} },
-            'Priority': {
-              select: {
-                options: [
-                  { name: 'Low', color: 'gray' as const },
-                  { name: 'Medium', color: 'yellow' as const },
-                  { name: 'High', color: 'red' as const }
-                ]
-              }
-            }
-          },
-
-          meeting_notes: {
-            'Title': { title: {} },
-            'Date': { date: {} },
-            'Participants': { multi_select: {} },
-            'Meeting Type': { 
-              select: {
-                options: [
-                  { name: 'Team Meeting', color: 'blue' as const },
-                  { name: 'Client Meeting', color: 'green' as const },
-                  { name: 'One-on-One', color: 'purple' as const },
-                  { name: 'All Hands', color: 'red' as const }
-                ]
-              }
-            },
-            'Action Items': { rich_text: {} },
-            'Notes': { rich_text: {} }
-          },
-
-          task_management: {
-            'Task': { title: {} },
-            'Status': { 
-              select: {
-                options: [
-                  { name: 'To Do', color: 'red' as const },
-                  { name: 'In Progress', color: 'yellow' as const },
-                  { name: 'Done', color: 'green' as const },
-                  { name: 'Blocked', color: 'gray' as const }
-                ]
-              }
-            },
-            'Priority': {
-              select: {
-                options: [
-                  { name: 'Low', color: 'gray' as const },
-                  { name: 'Medium', color: 'yellow' as const },
-                  { name: 'High', color: 'red' as const },
-                  { name: 'Critical', color: 'purple' as const }
-                ]
-              }
-            },
-            'Assignee': { rich_text: {} },
-            'Due Date': { date: {} },
-            'Tags': { multi_select: {} }
-          }
-        };
-        
-        const template = templates[templateName];
-        if (!template) {
-          return error(`Unknown template: ${templateName}`);
-        }
-
-        const db = await withRetry(
-          () => notion.databases.create({
-            parent: { page_id: parentPageId },
-            title: [{ type: 'text', text: { content: databaseTitle } }],
-            properties: template
-          }),
-          3,
-          'create_database_from_template'
-        );
-
-        return respond({
-          id: db.id,
-          title: databaseTitle,
-          template: templateName,
-          message: `Database "${databaseTitle}" created using ${templateName} template`
-        });
-      }
-
-      case 'bulk_create_pages_from_files': {
-        const folderPath = args?.folderPath as string;
-        const databaseId = resolveDatabaseId(args?.databaseId as string);
-        const fileExtensions = args?.fileExtensions as string[] || ['.pdf'];
-        
-        function scanFolderForFiles(folderPath: string, extensions: string[]): string[] {
-          const files: string[] = [];
-          
-          try {
-            const items = readdirSync(folderPath);
-            
-            for (const item of items) {
-              const itemPath = join(folderPath, item);
-              const stat = statSync(itemPath);
-              
-              if (stat.isFile()) {
-                const ext = extname(item).toLowerCase();
-                if (extensions.includes(ext)) {
-                  files.push(itemPath);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`Error scanning folder ${folderPath}:`, error);
-          }
-          
-          return files;
-        }
-        
-        const files = scanFolderForFiles(folderPath, fileExtensions);
-        let successCount = 0;
-        let errorCount = 0;
-        
-        for (const filePath of files) {
-          try {
-            const filename = basename(filePath, extname(filePath));
-            
-            await notion.pages.create({
-              parent: { database_id: databaseId },
-              properties: {
-                'Name': {
-                  title: [{ text: { content: filename } }]
-                },
-                'File Path': {
-                  rich_text: [{ text: { content: filePath } }]
-                }
-              }
-            });
-            
-            successCount++;
-            await new Promise(resolve => setTimeout(resolve, 400)); // Rate limiting
-          } catch (error) {
-            errorCount++;
-          }
-        }
-
-        return respond({
-          folderPath,
-          totalFiles: files.length,
-          successCount,
-          errorCount,
-          message: `Processed ${files.length} files: ${successCount} successful, ${errorCount} failed`
-        });
-      }
-
-      case 'upload_file_to_notion': {
-        // For now, simulate file upload since direct file upload requires specific API version
-        const filePath = args?.filePath as string;
-        const filename = args?.filename as string;
-        
-        try {
-          const fileInfo = statSync(filePath);
-          const finalFilename = filename || basename(filePath);
-          
-          return respond({
-            filename: finalFilename,
-            fileSize: fileInfo.size,
-            uploadPath: filePath,
-            message: `File "${finalFilename}" prepared for upload (${fileInfo.size} bytes)`
-          });
-        } catch (error: any) {
-          return error(error.message || 'Failed to process file');
-        }
-      }
-
-      case 'start_file_watcher': {
-        return respond({ 
-          message: 'File watching feature available in standalone version',
-          note: 'This feature requires additional setup for continuous monitoring'
-        });
-      }
-
-      case 'stop_file_watcher': {
-        return respond({ 
-          message: 'No active watchers to stop',
-          note: 'File watching feature available in standalone version'
-        });
-      }
-
-      case 'list_active_watchers': {
-        return respond({
-          activeWatchers: [],
-          count: 0,
-          note: 'File watching feature available in standalone version'
-        });
-      }
-
       default:
         return error(`Unknown tool: ${name}`);
     }
@@ -2627,7 +2230,7 @@ async function main() {
   await initialize();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('🚀 Notion MCP Server v3.0.0 running - Enhanced Edition with 46 tools (38 original + 8 enhanced)');
+  console.error('Notion MCP Server v2.8 running - Full-featured with caching, metrics, templates');
 }
 
 main().catch(err => {

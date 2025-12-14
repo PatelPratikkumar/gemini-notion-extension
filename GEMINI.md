@@ -1,7 +1,115 @@
-# Notion Extension Playbook v2.3
+# Notion Extension Playbook v2.4
 
 ## Purpose
 Full-featured Notion integration for Gemini CLI. Manage your entire Notion workspace - pages, databases, blocks, comments, users, projects, and conversation exports.
+
+---
+
+## 🎤 VOICE TRANSCRIPTION & CONTEXT UNDERSTANDING
+
+### User Input Reality
+Users often speak via voice transcription. Expect:
+- **Fragmented phrases**: "database" → "project" → "CLI"
+- **Misspellings**: "no shun" = "Notion", "data base" = "database"
+- **Partial words**: "conv" = "conversation", "proj" = "project"
+- **Wrong words**: "ocean" = "Notion", "extension" = "extension"
+- **No punctuation**: continuous stream of words
+- **Context switches**: jumping between topics mid-sentence
+
+### 🧠 CONTEXT INTERPRETATION RULES
+
+#### Rule A: Interpret Fragmented Input
+When user says disconnected words, piece together intent:
+
+| User Says | Interpret As |
+|-----------|--------------|
+| "search... CLI project... database" | Search databases for "CLI project" |
+| "notion... conversations... export" | Export conversation to Notion |
+| "delete... that page... meeting notes" | Delete page titled "meeting notes" |
+| "project... status... in progress" | Update project status to "In Progress" |
+| "find... yesterday... changes" | Get pages modified yesterday |
+
+#### Rule B: Phonetic Matching
+Match misspelled/misheard words to Notion concepts:
+
+| Heard As | Means |
+|----------|-------|
+| "no shun", "ocean", "motion" | Notion |
+| "data base", "database", "base" | database |
+| "page", "pages", "paged" | page |
+| "block", "blocks", "blog" | block |
+| "comment", "comments", "common" | comment |
+| "conv", "convo", "conversation" | conversation |
+| "proj", "project", "projected" | project |
+| "temp", "template", "templated" | template |
+| "export", "exported", "sport" | export |
+| "search", "searched", "surge" | search |
+
+#### Rule C: Context-Based Inference
+Use conversation history to fill gaps:
+
+**Example 1:**
+- User earlier: "Show me my project databases"
+- User now: "the second one"
+→ Select the 2nd database from previous results
+
+**Example 2:**
+- User earlier: "Search for meeting notes"
+- User now: "delete it"
+→ Delete the page found in previous search
+
+**Example 3:**
+- User earlier: "Create a page called Weekly Report"
+- User now: "add some content... introduction section"
+→ Append introduction section to "Weekly Report" page
+
+#### Rule D: Multiple Points → Hierarchy
+When user mentions multiple things, organize them:
+
+**User says:** "I need to search CLI project, then update status, also export conversation and check the database schema"
+
+**Break down as:**
+1. **Search**: Find "CLI project"
+2. **Update**: Change status (infer from context or use "In Progress")
+3. **Export**: Export current conversation to Notion
+4. **Check**: Get database schema
+
+**Execute in logical order. Report results hierarchically.**
+
+#### Rule E: Confidence-Based Response
+
+| Confidence | Action |
+|------------|--------|
+| **High** (clear intent) | Execute immediately, no options shown |
+| **Medium** (2-3 possibilities) | Pick most likely, mention alternatives briefly |
+| **Low** (many possibilities) | List top 3-5 options with one-line descriptions |
+
+**High Confidence Examples:**
+- "export conversation" → Export immediately
+- "list my databases" → List databases immediately
+- "delete Meeting Notes page" → Delete immediately
+
+**Medium Confidence Examples:**
+- "show me projects" → Show projects database, mention "Did you mean project pages?"
+- "update it" → Update most recent item, mention what was updated
+
+**Low Confidence Examples:**
+- "database" (alone) → List options: search? list? query? create?
+- "help" → Show tool categories with brief descriptions
+
+### 🎯 SMART DEFAULTS
+
+When information is missing, use smart defaults:
+
+| Missing | Default |
+|---------|---------|
+| **Date** | Today |
+| **Status** | "In Progress" or first option |
+| **Title** | Generate from context |
+| **Tags** | Infer from conversation content |
+| **Languages** | Detect from code blocks |
+| **Parent** | Most recently used database/page |
+| **Limit** | 20 results |
 
 ---
 

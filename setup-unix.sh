@@ -172,35 +172,79 @@ echo -e "\n${YELLOW}[3/4] Discovering your Notion databases...${NC}"
 
 db_response=$(search_databases "$token")
 
-# Parse databases (basic parsing without jq dependency)
+# Debug: Check if response is valid
+if [ -z "$db_response" ]; then
+    echo -e "${RED}      ✗ Empty response from Notion API${NC}"
+    exit 1
+fi
+
+# Check for API errors
+if echo "$db_response" | grep -q '"status":4'; then
+    echo -e "${RED}      ✗ API Error - Check token permissions${NC}"
+    echo "$db_response" | grep -o '"message":"[^"]*"' | head -1
+    exit 1
+fi
+
+# Parse databases using simpler method
 declare -a db_ids
 declare -a db_titles
 db_count=0
 
-# Extract database info using grep and sed
-while IFS= read -r line; do
-    if [[ "$line" == *'"id":'* ]]; then
-        id=$(echo "$line" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+# Check if jq is available for better parsing
+if command -v jq &> /dev/null; then
+    # Use jq for reliable parsing
+    while IFS=$'\t' read -r id title; do
         if [ -n "$id" ] && [ "$id" != "null" ]; then
             db_ids+=("$id")
+            db_titles+=("${title:-Untitled}")
+            ((db_count++))
         fi
+    done < <(echo "$db_response" | jq -r '.results[]? | [.id, (.title[0]?.plain_text // "Untitled")] | @tsv' 2>/dev/null)
+else
+    # Fallback: Extract IDs from results array
+    # This regex-based approach is more reliable
+    echo -e "${GRAY}      (Installing jq recommended for better parsing)${NC}"
+    
+    # Extract all database IDs
+    ids_raw=$(echo "$db_response" | grep -oP '"id"\s*:\s*"[0-9a-f-]{36}"' | grep -oP '[0-9a-f-]{36}')
+    
+    # Extract all plain_text titles
+    titles_raw=$(echo "$db_response" | grep -oP '"plain_text"\s*:\s*"[^"]*"' | sed 's/"plain_text"\s*:\s*"//g' | sed 's/"$//g')
+    
+    # Convert to arrays
+    while IFS= read -r id; do
+        if [ -n "$id" ]; then
+            db_ids+=("$id")
+        fi
+    done <<< "$ids_raw"
+    
+    while IFS= read -r title; do
+        if [ -n "$title" ]; then
+            db_titles+=("$title")
+        fi
+    done <<< "$titles_raw"
+    
+    db_count=${#db_ids[@]}
+fi
+
+# Handle no databases found
+if [ $db_count -eq 0 ]; then
+    echo -e "${YELLOW}      No databases found in your workspace.${NC}"
+    echo -e "${GRAY}      Make sure you've shared databases with your integration.${NC}"
+    echo ""
+    echo -e "${CYAN}      Options:${NC}"
+    echo -e "      1. Share existing databases with your integration in Notion"
+    echo -e "      2. Continue to create a new Gemini Conversations database"
+    echo ""
+    echo -n "      Continue without existing databases? (Y/n): "
+    read continue_choice
+    if [ "$continue_choice" = "n" ] || [ "$continue_choice" = "N" ]; then
+        echo -e "\n${YELLOW}Setup paused. Share databases with your integration and run again.${NC}"
+        exit 0
     fi
-done <<< "$(echo "$db_response" | tr ',' '\n')"
-
-# Get titles separately (simpler parsing)
-titles=$(echo "$db_response" | grep -o '"plain_text":"[^"]*"' | cut -d'"' -f4)
-
-i=0
-while IFS= read -r title; do
-    if [ -n "$title" ]; then
-        db_titles+=("$title")
-        ((i++))
-    fi
-done <<< "$titles"
-
-db_count=${#db_ids[@]}
-
-echo -e "\n${GREEN}      Found ${db_count} database(s):${NC}"
+else
+    echo -e "\n${GREEN}      Found ${db_count} database(s):${NC}"
+fi
 
 conversation_db=""
 project_db=""

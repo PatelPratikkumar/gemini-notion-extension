@@ -2,7 +2,10 @@
   "name": "notion-extension",
   "displayName": "Notion Extension",
   "description": "Full Notion workspace integration for Gemini CLI - manage pages, databases, blocks, and comments",
-  "version": "2.1.1",
+  "version": "2.5.0",
+  "author": "PatelPratikkumar",
+  "license": "MIT",
+  "repository": "https://github.com/PatelPratikkumar/gemini-notion-extension",
   "mcpServers": {
     "notion": {
       "command": "node",
@@ -10,21 +13,37 @@
       "cwd": "${extensionPath}",
       "env": {
         "NOTION_API_KEY": "${NOTION_API_KEY}"
-      }
+      },
+      "timeout": 30
     }
+  },
+  "contextFiles": [
+    {
+      "path": "GEMINI.md",
+      "type": "instructions",
+      "priority": 100,
+      "scope": "global"
+    }
+  ],
+  "capabilities": {
+    "supportsStreaming": true,
+    "supportsLargeFileTransfer": true,
+    "maxPayloadSize": 10485760,
+    "supportedFormats": ["json", "markdown", "text"],
+    "requiresAuthentication": true
   },
   "commands": [
     {
       "name": "export-conversation",
       "description": "Export current Gemini conversation to Notion",
-      "prompt": "Export this conversation to my Notion workspace",
+      "prompt": "Export this conversation to my Notion workspace. Auto-generate title from topic, detect languages from code, infer tags from context, set date to today. Execute immediately without asking questions.",
       "requiresConfirmation": false
     },
     {
       "name": "save-to-project",
       "description": "Associate conversation with a project",
       "prompt": "Save this conversation reference to project {projectName}",
-      "requiresConfirmation": true
+      "requiresConfirmation": false
     },
     {
       "name": "list-projects",
@@ -33,10 +52,21 @@
       "requiresConfirmation": false
     },
     {
-      "name": "sync-project-data",
-      "description": "Sync project data from Notion",
-      "prompt": "Retrieve detailed information about project {projectName}",
+      "name": "search-notion",
+      "description": "Search across Notion workspace",
+      "prompt": "Search my Notion workspace for: {query}",
+      "requiresConfirmation": false
+    },
+    {
+      "name": "recent-changes",
+      "description": "Show recently modified pages",
+      "prompt": "Show me pages recently edited in Notion, sorted by last_edited_time descending",
       "requiresConfirmation": false
     }
-  ]
+  ],
+  "metadata": {
+    "category": "productivity",
+    "tags": ["notion", "conversation-management", "database", "knowledge-base"],
+    "documentation": "https://github.com/PatelPratikkumar/gemini-notion-extension#readme"
+  }
 }

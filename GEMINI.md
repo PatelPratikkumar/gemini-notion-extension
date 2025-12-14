@@ -131,10 +131,87 @@ Response includes:
 
 ---
 
+## 🎯 DECISION TREE: What Tool to Use?
+
+```
+User Input
+├─ "save", "export", "store this", "upload"
+│  └─→ export_conversation (auto-generate everything)
+│
+├─ "delete", "remove", "archive"
+│  ├─→ notion_search (find the page first)
+│  └─→ delete_page (use EXACT ID from search)
+│
+├─ "search", "find", "look for"
+│  └─→ notion_search
+│
+├─ "show projects", "list projects", "my projects"
+│  └─→ list_projects
+│
+├─ "recent", "latest", "what changed"
+│  └─→ get_recent_changes OR query_database with timestamp sort
+│
+├─ "create page", "new page", "add page"
+│  └─→ create_page
+│
+├─ "create database", "new database"
+│  └─→ create_database
+│
+├─ "add column", "new property", "modify schema"
+│  └─→ update_database_schema
+│
+├─ "link", "associate", "connect to project"
+│  └─→ link_conversation_to_project
+│
+└─ Query about data
+   └─→ query_database with appropriate filters
+```
+
+---
+
+## 🔄 WORKFLOWS
+
+### Workflow 1: Export Conversation (One-Click)
+```
+User: "export this" / "save to Notion"
+    ↓
+Step 1: Auto-generate title from first meaningful topic
+Step 2: Detect languages from code blocks (TypeScript, Python, etc.)
+Step 3: Infer tags from discussion context
+Step 4: Set Export Date = today
+Step 5: Execute export_conversation immediately
+    ↓
+Result: "✓ Exported: [Title] - https://notion.so/page-id"
+```
+
+### Workflow 2: Delete Page (Search → Delete)
+```
+User: "delete the [page name]"
+    ↓
+Step 1: notion_search for the page
+Step 2: Get EXACT ID from search results
+Step 3: delete_page with that exact ID
+    ↓
+Result: "✓ Deleted: [Page Name]"
+```
+
+### Workflow 3: Query Recent Items
+```
+User: "show recent conversations" / "what was edited today"
+    ↓
+Step 1: query_database with sorts:
+        [{"timestamp": "last_edited_time", "direction": "descending"}]
+Step 2: Display results with titles and dates
+    ↓
+Result: List of recent items
+```
+
+---
+
 ## 🔍 SEARCH
 
 ### notion_search
-Search across entire workspace.
+Search across entire workspace. **Returns exact page IDs - use them!**
 ```
 "Find all pages about API design"
 "Search for database called Project Tracker"
@@ -387,6 +464,64 @@ See recently modified items.
 Use these shortcuts instead of IDs:
 - `"projects"` → Your configured project database
 - `"conversations"` → Your configured conversation database
+
+---
+
+## ⚡ PERFORMANCE OPTIMIZATION
+
+### Large Conversations (>100KB)
+1. Automatically chunk into multiple pages
+2. Create index page linking all chunks
+3. Title format: "Part X of Y"
+
+### Rate Limit Awareness
+- Notion allows 3 requests/second
+- For bulk operations, space them ~350ms apart
+- If rate limited, wait and retry
+
+### Caching Strategy
+- Database schema: Cache for 24 hours (rarely changes)
+- Project lists: Cache for 5 minutes
+- Single pages: Always fetch fresh
+
+---
+
+## 🚨 ERROR HANDLING
+
+### Common Errors & Solutions
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Database not found` | Wrong ID | Search for database first |
+| `Page not found` | Wrong ID or deleted | Verify page exists |
+| `Rate limited (429)` | Too many requests | Wait 2 seconds, retry |
+| `Unauthorized (401)` | Invalid API key | Check NOTION_API_KEY |
+| `Forbidden (403)` | No permission | Share page with integration |
+| `Property not found` | Wrong filter/sort | Use timestamp sorts for time |
+
+### Recovery Actions
+- **If search fails:** Try broader search terms
+- **If create fails:** Check parent ID exists
+- **If delete fails:** Verify exact page ID from search
+- **If query fails:** Use timestamp sorts, not property sorts for time
+
+---
+
+## 📋 QUICK REFERENCE
+
+### Must-Remember Rules
+1. **Use EXACT IDs** from search results - never make up IDs
+2. **Timestamp sorts:** `{"timestamp": "last_edited_time"}` not property
+3. **No confirmation needed** - just execute immediately
+4. **Auto-generate** titles, tags, dates from context
+
+### Example Commands
+```
+"export this" → export_conversation (auto-everything)
+"delete [name]" → search → delete with exact ID
+"recent pages" → query with timestamp sort descending
+"add column X" → update_database_schema
+```
 
 ---
 

@@ -462,6 +462,87 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
       }
 
+      case 'update_database_schema': {
+        const dbId = resolveDatabaseId(args?.databaseId as string);
+        const updates: any = {};
+        
+        // Update title
+        if (args?.title) {
+          updates.title = [{ type: 'text', text: { content: args.title as string } }];
+        }
+        
+        // Build properties update
+        const propertyUpdates: any = {};
+        
+        // Add new properties
+        if (args?.addProperties) {
+          for (const [name, config] of Object.entries(args.addProperties as Record<string, any>)) {
+            const propType = config.type || config;
+            switch (propType) {
+              case 'rich_text':
+                propertyUpdates[name] = { rich_text: {} };
+                break;
+              case 'number':
+                propertyUpdates[name] = { number: { format: config.format || 'number' } };
+                break;
+              case 'select':
+                propertyUpdates[name] = { select: { options: config.options || [] } };
+                break;
+              case 'multi_select':
+                propertyUpdates[name] = { multi_select: { options: config.options || [] } };
+                break;
+              case 'date':
+                propertyUpdates[name] = { date: {} };
+                break;
+              case 'checkbox':
+                propertyUpdates[name] = { checkbox: {} };
+                break;
+              case 'url':
+                propertyUpdates[name] = { url: {} };
+                break;
+              case 'email':
+                propertyUpdates[name] = { email: {} };
+                break;
+              case 'phone_number':
+                propertyUpdates[name] = { phone_number: {} };
+                break;
+              case 'people':
+                propertyUpdates[name] = { people: {} };
+                break;
+              case 'status':
+                propertyUpdates[name] = { status: { options: config.options || [], groups: config.groups || [] } };
+                break;
+              default:
+                propertyUpdates[name] = { [propType]: config.options ? { options: config.options } : {} };
+            }
+          }
+        }
+        
+        // Update existing properties
+        if (args?.updateProperties) {
+          Object.assign(propertyUpdates, args.updateProperties);
+        }
+        
+        // Remove properties (set to null)
+        if (args?.removeProperties) {
+          for (const name of args.removeProperties as string[]) {
+            propertyUpdates[name] = null;
+          }
+        }
+        
+        if (Object.keys(propertyUpdates).length > 0) {
+          updates.properties = propertyUpdates;
+        }
+        
+        const db = await notion.databases.update({ database_id: dbId, ...updates });
+        
+        return respond({ 
+          id: db.id, 
+          message: 'Database schema updated',
+          propertiesModified: Object.keys(propertyUpdates)
+        });
+      }
+
       // ==================== BLOCKS ====================
       case 'get_block_children': {
         const blockId = parsePageId(args?.blockId as string);

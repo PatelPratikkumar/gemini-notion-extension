@@ -522,6 +522,37 @@ export const tools = [
     },
   },
   {
+    name: 'update_database_schema',
+    description: 'Add, update, or remove properties (columns) from a database schema.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        databaseId: {
+          type: 'string',
+          description: 'Database ID (or shortcuts: "projects", "conversations")',
+        },
+        title: {
+          type: 'string',
+          description: 'New database title (optional)',
+        },
+        addProperties: {
+          type: 'object',
+          description: 'Properties to add. Format: {"PropertyName": {"type": "rich_text|number|select|multi_select|date|checkbox|url|email|phone_number|people|relation"}}',
+        },
+        updateProperties: {
+          type: 'object',
+          description: 'Properties to update (e.g., rename, change options)',
+        },
+        removeProperties: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Property names to remove',
+        },
+      },
+      required: ['databaseId'],
+    },
+  },
+  {
     name: 'duplicate_page',
     description: 'Create a copy of an existing page.',
     inputSchema: {

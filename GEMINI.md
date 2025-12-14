@@ -117,6 +117,33 @@ View database structure.
 "Show me the schema of conversations database"
 ```
 
+### update_database_schema
+Add, remove, or modify database properties (columns). **Use this to enhance databases!**
+
+**Add new columns:**
+```
+"Add an 'Assigned To' people column to the conversations database"
+"Add a Status property to my Tasks database"
+"Add Priority (select: High/Medium/Low) to projects"
+```
+
+**Property types you can add:**
+- `rich_text` - Text field
+- `number` - Numeric values
+- `select` - Single choice dropdown
+- `multi_select` - Multiple choice tags
+- `date` - Date/time picker
+- `checkbox` - True/false
+- `url` - Links
+- `email` - Email addresses
+- `people` - Notion users (Assigned To, Owner, etc.)
+- `status` - Status with groups (To Do, In Progress, Done)
+
+**Remove columns:**
+```
+"Remove the 'Old Field' column from projects database"
+```
+
 ---
 
 ## 📝 BLOCKS (Content)

@@ -9919,6 +9919,37 @@ var tools = [
     }
   },
   {
+    name: "update_database_schema",
+    description: "Add, update, or remove properties (columns) from a database schema.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        databaseId: {
+          type: "string",
+          description: 'Database ID (or shortcuts: "projects", "conversations")'
+        },
+        title: {
+          type: "string",
+          description: "New database title (optional)"
+        },
+        addProperties: {
+          type: "object",
+          description: 'Properties to add. Format: {"PropertyName": {"type": "rich_text|number|select|multi_select|date|checkbox|url|email|phone_number|people|relation"}}'
+        },
+        updateProperties: {
+          type: "object",
+          description: "Properties to update (e.g., rename, change options)"
+        },
+        removeProperties: {
+          type: "array",
+          items: { type: "string" },
+          description: "Property names to remove"
+        }
+      },
+      required: ["databaseId"]
+    }
+  },
+  {
     name: "duplicate_page",
     description: "Create a copy of an existing page.",
     inputSchema: {
@@ -10365,6 +10396,73 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           id: db.id,
           title: richTextToPlain(db.title),
           properties: schema
+        });
+      }
+      case "update_database_schema": {
+        const dbId = resolveDatabaseId(args?.databaseId);
+        const updates = {};
+        if (args?.title) {
+          updates.title = [{ type: "text", text: { content: args.title } }];
+        }
+        const propertyUpdates = {};
+        if (args?.addProperties) {
+          for (const [name2, config] of Object.entries(args.addProperties)) {
+            const propType = config.type || config;
+            switch (propType) {
+              case "rich_text":
+                propertyUpdates[name2] = { rich_text: {} };
+                break;
+              case "number":
+                propertyUpdates[name2] = { number: { format: config.format || "number" } };
+                break;
+              case "select":
+                propertyUpdates[name2] = { select: { options: config.options || [] } };
+                break;
+              case "multi_select":
+                propertyUpdates[name2] = { multi_select: { options: config.options || [] } };
+                break;
+              case "date":
+                propertyUpdates[name2] = { date: {} };
+                break;
+              case "checkbox":
+                propertyUpdates[name2] = { checkbox: {} };
+                break;
+              case "url":
+                propertyUpdates[name2] = { url: {} };
+                break;
+              case "email":
+                propertyUpdates[name2] = { email: {} };
+                break;
+              case "phone_number":
+                propertyUpdates[name2] = { phone_number: {} };
+                break;
+              case "people":
+                propertyUpdates[name2] = { people: {} };
+                break;
+              case "status":
+                propertyUpdates[name2] = { status: { options: config.options || [], groups: config.groups || [] } };
+                break;
+              default:
+                propertyUpdates[name2] = { [propType]: config.options ? { options: config.options } : {} };
+            }
+          }
+        }
+        if (args?.updateProperties) {
+          Object.assign(propertyUpdates, args.updateProperties);
+        }
+        if (args?.removeProperties) {
+          for (const name2 of args.removeProperties) {
+            propertyUpdates[name2] = null;
+          }
+        }
+        if (Object.keys(propertyUpdates).length > 0) {
+          updates.properties = propertyUpdates;
+        }
+        const db = await notion.databases.update({ database_id: dbId, ...updates });
+        return respond({
+          id: db.id,
+          message: "Database schema updated",
+          propertiesModified: Object.keys(propertyUpdates)
         });
       }
       // ==================== BLOCKS ====================

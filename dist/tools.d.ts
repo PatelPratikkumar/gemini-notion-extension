@@ -46,6 +46,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -110,6 +113,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -159,6 +165,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -220,6 +229,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -266,6 +278,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -312,6 +327,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -380,6 +398,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -435,6 +456,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -487,6 +511,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -536,6 +563,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -591,6 +621,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -647,6 +680,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -693,6 +729,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -745,6 +784,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -788,6 +830,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -842,6 +887,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -904,6 +952,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -969,6 +1020,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -1043,6 +1097,9 @@ export declare const tools: ({
             technologies?: undefined;
             githubRepo?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -1092,6 +1149,9 @@ export declare const tools: ({
             githubRepo?: undefined;
             tags?: undefined;
             conversationData?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };
@@ -1111,6 +1171,73 @@ export declare const tools: ({
             filter?: undefined;
             limit?: undefined;
             title?: undefined;
+            parentPageId?: undefined;
+            parentDatabaseId?: undefined;
+            content?: undefined;
+            icon?: undefined;
+            cover?: undefined;
+            properties?: undefined;
+            pageId?: undefined;
+            includeContent?: undefined;
+            archived?: undefined;
+            sorts?: undefined;
+            isInline?: undefined;
+            blockId?: undefined;
+            recursive?: undefined;
+            parentId?: undefined;
+            blocks?: undefined;
+            type?: undefined;
+            discussionId?: undefined;
+            status?: undefined;
+            sortBy?: undefined;
+            name?: undefined;
+            description?: undefined;
+            technologies?: undefined;
+            githubRepo?: undefined;
+            projectId?: undefined;
+            tags?: undefined;
+            conversationData?: undefined;
+            conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
+            newTitle?: undefined;
+            targetParentId?: undefined;
+        };
+        required: string[];
+    };
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: string;
+        properties: {
+            databaseId: {
+                type: string;
+                description: string;
+            };
+            title: {
+                type: string;
+                description: string;
+            };
+            addProperties: {
+                type: string;
+                description: string;
+            };
+            updateProperties: {
+                type: string;
+                description: string;
+            };
+            removeProperties: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            query?: undefined;
+            filter?: undefined;
+            limit?: undefined;
             parentPageId?: undefined;
             parentDatabaseId?: undefined;
             content?: undefined;
@@ -1192,6 +1319,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
         };
         required: string[];
     };
@@ -1240,6 +1370,9 @@ export declare const tools: ({
             tags?: undefined;
             conversationData?: undefined;
             conversationId?: undefined;
+            addProperties?: undefined;
+            updateProperties?: undefined;
+            removeProperties?: undefined;
             newTitle?: undefined;
             targetParentId?: undefined;
         };

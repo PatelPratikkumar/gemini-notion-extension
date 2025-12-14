@@ -19,6 +19,9 @@ node_modules/
 # Research folder with trade secrets
 research/
 
+# Private test scripts (local development only)
+tests/
+
 # Local cache
 .local/
 .notion-cache.json

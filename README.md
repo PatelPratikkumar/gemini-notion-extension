@@ -434,6 +434,29 @@ gemini-notion-extension/
 
 ## 🔄 Changelog
 
+### v2.7.0 (2025-12-14)
+- ⚡ **Rate Limiting**: Token Bucket algorithm (3 requests/second)
+- 🔄 **Retry Logic**: Exponential backoff for 429/5xx errors
+- 📄 **Auto-Pagination**: Handle >100 database items automatically
+- 📦 **Block Pagination**: Handle >100 blocks per page
+- ✂️ **Content Chunking**: Split >50KB content automatically
+- 🔀 **Batch Appending**: Handle >100 blocks per request
+- 🌐 Network error handling (ECONNRESET, ETIMEDOUT)
+
+### v2.5.0 (2025-12-14)
+- 📋 Decision tree for tool selection
+- 📝 Step-by-step workflows in GEMINI.md
+- 🔧 contextFiles declaration for AI guidance
+- 🚀 New commands: `search-notion`, `recent-changes`
+
+### v2.3.0 (2025-12-14)
+- 📦 esbuild bundling for standalone installation (~640KB)
+- 🔧 Proper MCP server configuration
+
+### v2.1.0 (2025-12-14)
+- 🔗 Direct GitHub installation support
+- 📚 Comprehensive troubleshooting section
+
 ### v2.0.0 (2025-12-14)
 - ✨ 25 comprehensive Notion tools
 - 🔐 Cross-platform secure credential storage

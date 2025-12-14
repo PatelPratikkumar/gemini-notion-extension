@@ -66,10 +66,11 @@ Before installing, you need:
 
 ## 🚀 Quick Start
 
-### Option A: Install from GitHub (Recommended)
+### Option A: Install from GitHub (Recommended for Auto-Updates)
 
+**For automatic updates with `gemini extensions update`:**
 ```bash
-gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
 ```
 
 Then run the setup script from the extension directory:
@@ -83,7 +84,9 @@ cd ~/.gemini/extensions/notion-extension
 chmod +x setup-unix.sh && ./setup-unix.sh
 ```
 
-### Option B: Clone and Build Manually
+### Option B: Clone and Build Manually (For Development)
+
+**For local development and custom modifications:**
 
 #### 1. Clone the Repository
 
@@ -212,7 +215,83 @@ Export this conversation
 
 ---
 
-## 🛠️ Complete Tool Reference (46 Tools)
+## � Extension Management & Updates
+
+### Updating the Extension
+
+The update method depends on how you installed the extension:
+
+#### Git-Installed Extensions (Automatic Updates Available ✅)
+If installed with `gemini extensions install https://...`:
+```bash
+# Update specific extension to latest version
+gemini extensions update notion-extension
+
+# Update all extensions at once
+gemini extensions update --all
+```
+
+#### Locally Linked Extensions (Manual Updates Required 🔧)
+If installed with `gemini extensions link .` (development):
+```bash
+cd /path/to/your/gemini-notion-extension
+git pull origin main
+npm install
+npm run build
+# Extension automatically reflects changes
+```
+
+#### Force Reinstall from GitHub
+```bash
+# For any issues or switching from local to git-managed
+gemini extensions uninstall notion-extension
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+```
+
+### Extension Management Commands
+
+```bash
+# List all installed extensions
+gemini extensions list
+
+# Check extension status and info
+gemini extensions list | grep notion-extension
+
+# Disable temporarily (keeps configuration)
+gemini extensions disable notion-extension
+
+# Re-enable extension
+gemini extensions enable notion-extension
+
+# Completely remove extension
+gemini extensions uninstall notion-extension
+
+# Validate extension integrity
+gemini extensions validate .
+```
+
+### Auto-Update Setup
+
+For automatic updates when installing:
+```bash
+# Install with auto-update enabled
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+```
+
+### Version Checking
+
+```bash
+# Check current version
+gemini extensions list | grep notion-extension
+
+# View extension details
+cd ~/.gemini/extensions/notion-extension
+cat package.json | grep version
+```
+
+---
+
+## �🛠️ Complete Tool Reference (46 Tools)
 
 ### 🔧 Core Notion Operations (38 Tools)
 
@@ -580,10 +659,34 @@ Make sure you've run the setup script or set the credential manually:
 - macOS: `security find-generic-password -s "gemini-notion-extension" -a "NOTION_API_KEY" -w`
 - Linux: `secret-tool lookup service gemini-notion-extension account NOTION_API_KEY`
 
+### Extension Updates
+
+#### "Extension update failed"
+```bash
+# Force reinstall from GitHub
+gemini extensions uninstall notion-extension
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+```
+
+#### "Extension is already up to date" (but you know there's a new version)
+```bash
+# Check GitHub for latest version, then force install
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+```
+
+#### Local development version not updating
+```bash
+cd /path/to/gemini-notion-extension
+git pull origin main
+npm install
+npm run build
+```
+
 ### "Extension not loading"
 
 1. Rebuild: `npm run build`
 2. Relink: `gemini extensions uninstall notion-extension && gemini extensions link .`
+3. Check status: `gemini extensions list`
 
 ### "API errors" or "object not found"
 

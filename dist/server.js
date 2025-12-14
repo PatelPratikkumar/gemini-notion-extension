@@ -3,7 +3,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
-import { Client } from '@notionhq/client';
+import { Client, APIResponseError } from '@notionhq/client';
 import { tools } from './tools.js';
 import { getNotionApiKey } from './credentials.js';
 import { readFileSync, existsSync } from 'fs';
@@ -17,6 +17,97 @@ const PROJECT_ROOT = join(__dirname, '..');
 let notion;
 let conversationDbId;
 let projectDbId;
+// ============================================================
+// RATE LIMITING & RETRY LOGIC (from research/api_help.md)
+// ============================================================
+/**
+ * Token Bucket Rate Limiter
+ * Notion API: 3 requests/second average
+ */
+class TokenBucket {
+    tokens;
+    lastRefillTime;
+    maxTokens;
+    refillRate; // tokens per second
+    constructor(maxTokens = 3, refillRate = 3) {
+        this.maxTokens = maxTokens;
+        this.refillRate = refillRate;
+        this.tokens = maxTokens;
+        this.lastRefillTime = Date.now();
+    }
+    async acquireToken() {
+        // Refill tokens based on elapsed time
+        const now = Date.now();
+        const elapsedSeconds = (now - this.lastRefillTime) / 1000;
+        this.tokens = Math.min(this.maxTokens, this.tokens + elapsedSeconds * this.refillRate);
+        this.lastRefillTime = now;
+        if (this.tokens >= 1) {
+            this.tokens -= 1;
+            return;
+        }
+        // Wait for token to become available
+        const waitTime = ((1 - this.tokens) / this.refillRate) * 1000;
+        await sleep(waitTime);
+        this.tokens = 0;
+        this.lastRefillTime = Date.now();
+    }
+}
+const rateLimiter = new TokenBucket(3, 3);
+/**
+ * Sleep helper
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+/**
+ * Execute with retry and exponential backoff
+ * Handles 429 (rate limit) and 5xx (server errors)
+ */
+async function withRetry(operation, maxRetries = 3, operationName = 'API call') {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            // Acquire rate limit token before each request
+            await rateLimiter.acquireToken();
+            return await operation();
+        }
+        catch (error) {
+            lastError = error;
+            // Check if it's a Notion API error
+            if (error instanceof APIResponseError) {
+                const status = error.status;
+                // Rate limited (429) - wait and retry
+                if (status === 429) {
+                    // Try to get Retry-After header value, default to exponential backoff
+                    const retryAfter = Math.pow(2, attempt) + Math.random();
+                    console.error(`[Rate Limited] ${operationName} - waiting ${retryAfter.toFixed(1)}s (attempt ${attempt + 1}/${maxRetries + 1})`);
+                    await sleep(retryAfter * 1000);
+                    continue;
+                }
+                // Server errors (5xx) - retry with backoff
+                if (status >= 500) {
+                    const backoff = Math.pow(2, attempt) + Math.random();
+                    console.error(`[Server Error ${status}] ${operationName} - retrying in ${backoff.toFixed(1)}s (attempt ${attempt + 1}/${maxRetries + 1})`);
+                    await sleep(backoff * 1000);
+                    continue;
+                }
+                // Client errors (4xx except 429) - don't retry
+                throw error;
+            }
+            // Network errors - retry with backoff
+            if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+                const backoff = Math.pow(2, attempt) + Math.random();
+                console.error(`[Network Error] ${operationName} - retrying in ${backoff.toFixed(1)}s (attempt ${attempt + 1}/${maxRetries + 1})`);
+                await sleep(backoff * 1000);
+                continue;
+            }
+            // Unknown error - don't retry
+            throw error;
+        }
+    }
+    throw lastError || new Error(`${operationName} failed after ${maxRetries + 1} attempts`);
+}
+// ============================================================
 /**
  * Load database IDs from cache file
  */
@@ -267,11 +358,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             case 'notion_search': {
                 const filter = args?.filter === 'all' ? undefined :
                     args?.filter ? { property: 'object', value: args.filter } : undefined;
-                const results = await notion.search({
+                const results = await withRetry(() => notion.search({
                     query: args?.query,
                     filter,
                     page_size: args?.limit || 20,
-                });
+                }), 3, 'notion_search');
                 const formatted = results.results.map((r) => ({
                     id: r.id,
                     type: r.object,
@@ -292,7 +383,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ? { Name: { title: [{ text: { content: args?.title } }] }, ...(args?.properties || {}) }
                     : { title: { title: [{ text: { content: args?.title } }] } };
                 const children = args?.content ? markdownToBlocks(args.content) : undefined;
-                const page = await notion.pages.create({
+                const page = await withRetry(() => notion.pages.create({
                     parent,
                     properties,
                     children,
@@ -300,15 +391,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         ? { type: 'external', external: { url: args.icon } }
                         : { type: 'emoji', emoji: args.icon } : undefined,
                     cover: args?.cover ? { type: 'external', external: { url: args.cover } } : undefined,
-                });
+                }), 3, 'create_page');
                 return respond({ id: page.id, url: page.url, message: 'Page created successfully' });
             }
             case 'get_page': {
                 const pageId = parsePageId(args?.pageId);
-                const page = await notion.pages.retrieve({ page_id: pageId });
+                const page = await withRetry(() => notion.pages.retrieve({ page_id: pageId }), 3, 'get_page');
                 let content = [];
                 if (args?.includeContent !== false) {
-                    const blocks = await notion.blocks.children.list({ block_id: pageId, page_size: 100 });
+                    const blocks = await withRetry(() => notion.blocks.children.list({ block_id: pageId, page_size: 100 }), 3, 'get_page_blocks');
                     content = blocks.results;
                 }
                 return respond({ page, content });
@@ -335,20 +426,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 if (args?.archived !== undefined) {
                     updates.archived = args.archived;
                 }
-                const page = await notion.pages.update({ page_id: pageId, ...updates });
+                const page = await withRetry(() => notion.pages.update({ page_id: pageId, ...updates }), 3, 'update_page');
                 return respond({ id: page.id, message: 'Page updated successfully' });
             }
             case 'delete_page': {
                 const pageId = parsePageId(args?.pageId);
-                await notion.pages.update({ page_id: pageId, archived: true });
+                await withRetry(() => notion.pages.update({ page_id: pageId, archived: true }), 3, 'delete_page');
                 return respond({ message: 'Page archived (deleted)' });
             }
             // ==================== DATABASES ====================
             case 'list_databases': {
-                const results = await notion.search({
+                const results = await withRetry(() => notion.search({
                     filter: { property: 'object', value: 'database' },
                     page_size: args?.limit || 50,
-                });
+                }), 3, 'list_databases');
                 const databases = results.results.map((db) => ({
                     id: db.id,
                     title: richTextToPlain(db.title),
@@ -372,12 +463,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         return { property: sort.property, direction: sort.direction || 'ascending' };
                     });
                 }
-                const results = await notion.databases.query({
+                const results = await withRetry(() => notion.databases.query({
                     database_id: dbId,
                     filter: args?.filter,
                     sorts: processedSorts,
                     page_size: args?.limit || 100,
-                });
+                }), 3, 'query_database');
                 const formatted = formatDatabaseResults(results.results);
                 return respond({ count: formatted.length, results: formatted });
             }
@@ -386,27 +477,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const defaultProperties = {
                     Name: { title: {} },
                 };
-                const db = await notion.databases.create({
+                const db = await withRetry(() => notion.databases.create({
                     parent: { type: 'page_id', page_id: parentId },
                     title: [{ type: 'text', text: { content: args?.title } }],
                     is_inline: args?.isInline || false,
                     properties: args?.properties || defaultProperties,
-                });
+                }), 3, 'create_database');
                 return respond({ id: db.id, url: db.url, message: 'Database created' });
             }
             case 'add_database_entry': {
                 const dbId = resolveDatabaseId(args?.databaseId);
                 const children = args?.content ? markdownToBlocks(args.content) : undefined;
-                const page = await notion.pages.create({
+                const page = await withRetry(() => notion.pages.create({
                     parent: { database_id: dbId },
                     properties: args?.properties,
                     children,
-                });
+                }), 3, 'add_database_entry');
                 return respond({ id: page.id, url: page.url, message: 'Entry added' });
             }
             case 'get_database_schema': {
                 const dbId = resolveDatabaseId(args?.databaseId);
-                const db = await notion.databases.retrieve({ database_id: dbId });
+                const db = await withRetry(() => notion.databases.retrieve({ database_id: dbId }), 3, 'get_database_schema');
                 const schema = Object.entries(db.properties).map(([name, prop]) => ({
                     name,
                     type: prop.type,

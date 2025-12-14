@@ -13,6 +13,12 @@ node_modules/
 .env.*
 !.env.example
 
+# GitHub folder with private instructions (SECURITY)
+.github/
+
+# Research folder with trade secrets
+research/
+
 # Local cache
 .local/
 .notion-cache.json

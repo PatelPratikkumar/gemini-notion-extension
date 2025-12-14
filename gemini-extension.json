@@ -1,8 +1,8 @@
 {
   "name": "notion-extension",
-  "displayName": "Notion Extension",
-  "description": "Full Notion workspace integration for Gemini CLI - manage pages, databases, blocks, and comments",
-  "version": "2.8.0",
+  "displayName": "Notion Extension v3.0 Enhanced Edition",
+  "description": "Enhanced Notion workspace automation with 46+ tools, file processing, database templates, and monitoring",
+  "version": "3.0.0",
   "author": "PatelPratikkumar",
   "license": "MIT",
   "repository": "https://github.com/PatelPratikkumar/gemini-notion-extension",

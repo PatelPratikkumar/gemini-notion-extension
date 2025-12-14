@@ -13,6 +13,14 @@ node_modules/
 .env.*
 !.env.example
 
+# Backup folder - DO NOT COMMIT BACKUP FILES
+# Contains deleted files for recovery - keep local only
+deleted_backup/
+
+# Backup folder - DO NOT COMMIT BACKUP FILES
+# Contains deleted files for recovery - keep local only
+deleted_backup/
+
 # GitHub folder with private instructions (SECURITY)
 .github/
 
@@ -55,4 +63,22 @@ Thumbs.db
 coverage/
 *.bak
 *.backup
+
+# ============================================
+# BACKUP RECOVERY INSTRUCTIONS
+# ============================================
+# 
+# IMPORTANT: deleted_backup/ folder contains:
+# - Research files and documentation
+# - Test scripts with API keys (removed from Git)
+# - Previous versions of files for recovery
+# - Local development artifacts
+#
+# DO NOT COMMIT deleted_backup/ TO GIT
+# This folder is for local recovery purposes only
+# 
+# To restore files from backup:
+# - Research: Copy-Item deleted_backup\research . -Recurse
+# - Tests: Copy-Item deleted_backup\*test* test\ -Force
+# - Always check .gitignore before committing restored files
 

@@ -358,6 +358,12 @@ export declare const tools: ({
                     properties: {
                         property: {
                             type: string;
+                            description: string;
+                        };
+                        timestamp: {
+                            type: string;
+                            enum: string[];
+                            description: string;
                         };
                         direction: {
                             type: string;

@@ -404,10 +404,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'query_database': {
         const dbId = resolveDatabaseId(args?.databaseId as string);
         
+        // Process sorts - support both property and timestamp sorts
+        let processedSorts = args?.sorts as any;
+        if (processedSorts) {
+          processedSorts = processedSorts.map((sort: any) => {
+            // If it has 'timestamp' field, it's a timestamp sort (last_edited_time, created_time)
+            if (sort.timestamp) {
+              return { timestamp: sort.timestamp, direction: sort.direction || 'descending' };
+            }
+            // Otherwise it's a property sort
+            return { property: sort.property, direction: sort.direction || 'ascending' };
+          });
+        }
+        
         const results = await notion.databases.query({
           database_id: dbId,
           filter: args?.filter as any,
-          sorts: args?.sorts as any,
+          sorts: processedSorts,
           page_size: (args?.limit as number) || 100,
         });
         

@@ -1,37 +1,133 @@
-# Notion Extension Playbook v2.1
+# Notion Extension Playbook v2.3
 
 ## Purpose
 Full-featured Notion integration for Gemini CLI. Manage your entire Notion workspace - pages, databases, blocks, comments, users, projects, and conversation exports.
 
 ---
 
-## ⚡ CRITICAL BEHAVIOR RULES
+## ⚡ CRITICAL BEHAVIOR RULES - READ THIS FIRST!
 
-**DO NOT ASK QUESTIONS. JUST DO IT.**
+### 🚨 RULE 1: NEVER ASK QUESTIONS. JUST DO IT.
+
+When user says "delete this page" or "delete that":
+1. Search for the page
+2. Get the **actual ID from search results** (DO NOT MAKE UP IDs!)
+3. Delete it immediately
+4. DO NOT ask "are you sure?" - just delete it
 
 When user says "export conversation" or "save to Notion":
-1. **Auto-generate title** from conversation topic (e.g., "Notion Extension Development - Dec 14")
-2. **Auto-detect languages** from code in conversation (TypeScript, Python, etc.)
-3. **Auto-detect tags** from context (development, debugging, documentation, etc.)
-4. **Auto-fill date** as current date
-5. **Execute immediately** - do NOT ask for confirmation
+1. Auto-generate title from conversation topic (e.g., "Notion Extension Dev - Dec 14")
+2. Auto-detect languages from code (TypeScript, Python, etc.)
+3. Auto-detect tags from context (development, debugging, documentation)
+4. Set Export Date to today
+5. **Execute immediately** - NO confirmation needed
 
-When user says "create page" without details:
-- Generate sensible title from context
-- Create it immediately
+### 🚨 RULE 2: USE ACTUAL IDs FROM SEARCH RESULTS
 
-When user says "create project" without details:
-- Use conversation context for project name
-- Set status to "Planning" by default
-- Create it immediately
+**CRITICAL:** When search returns results like:
+```json
+{"id": "2c881500-2ffb-8144-825a-db0ce905661f", "title": "My Page"}
+```
+You MUST use that exact ID: `2c881500-2ffb-8144-825a-db0ce905661f`
+**NEVER make up fake IDs like `a8d5e0f7-9c1c-4f5c-b5b5-1e3f8a9d0e1b`**
 
-**NEVER ask:**
-- "What title would you like?"
-- "Do you want to add tags?"
+### 🚨 RULE 3: SORTING BY TIME - USE TIMESTAMP NOT PROPERTY
+
+To sort by most recent, use Notion's built-in timestamp:
+```json
+{"sorts": [{"timestamp": "last_edited_time", "direction": "descending"}]}
+```
+**NOT** `{"property": "Last Edited"}` - that property doesn't exist!
+
+Available timestamp sorts:
+- `last_edited_time` - When page was last modified
+- `created_time` - When page was created
+
+### 🚨 RULE 4: NEVER SAY THESE PHRASES
+- "Is this the page you want?"
+- "Would you like me to..."
+- "Please confirm..."
+- "Are you sure?"
 - "Does that sound good?"
-- "What properties should I fill?"
 
-**ALWAYS just do it with smart defaults.**
+Just. Do. It.
+
+---
+
+## 📚 NOTION API FUNDAMENTALS - KNOW THESE!
+
+### API Limits (Critical Knowledge)
+
+| Limit | Value | Impact |
+|-------|-------|--------|
+| **Rate limit** | 3 requests/second | Space out bulk operations |
+| **Max results per query** | 100 items | Use pagination for more |
+| **Max blocks per append** | 100 blocks | Chunk large content |
+| **Rich text per block** | 2,000 characters | Split long text |
+| **Code block limit** | 100,000 characters | For large code |
+
+### Pagination for Large Datasets
+
+When fetching more than 100 items, use cursor-based pagination:
+```json
+{
+  "page_size": 100,
+  "start_cursor": "next_cursor_from_previous_response"
+}
+```
+
+Response includes:
+```json
+{
+  "results": [...],
+  "has_more": true,
+  "next_cursor": "abc123..."
+}
+```
+
+### Property Types Reference
+
+| Type | Use For | Example |
+|------|---------|---------|
+| `title` | Main name (required, one per DB) | Page title |
+| `rich_text` | Text content | Description, notes |
+| `number` | Numeric values | Count, price |
+| `select` | Single choice | Status, priority |
+| `multi_select` | Multiple tags | Languages, tags |
+| `date` | Date/datetime | Due date, created |
+| `checkbox` | Boolean | Is completed? |
+| `url` | Links | GitHub repo, website |
+| `email` | Email addresses | Contact email |
+| `people` | Notion users | Assigned to, owner |
+| `relation` | Link to other DB | Related projects |
+| `status` | Status with groups | To Do → Done |
+
+### Filter Syntax Examples
+
+**Single filter:**
+```json
+{"property": "Status", "select": {"equals": "Active"}}
+```
+
+**Text contains:**
+```json
+{"property": "Title", "title": {"contains": "API"}}
+```
+
+**Date filter:**
+```json
+{"property": "Due Date", "date": {"on_or_before": "2024-12-31"}}
+```
+
+**Compound filter (AND):**
+```json
+{
+  "and": [
+    {"property": "Status", "select": {"equals": "Active"}},
+    {"property": "Priority", "select": {"equals": "High"}}
+  ]
+}
+```
 
 ---
 

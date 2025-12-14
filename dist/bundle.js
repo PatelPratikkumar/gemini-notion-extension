@@ -9408,7 +9408,7 @@ var tools = [
   // ==================== SEARCH ====================
   {
     name: "notion_search",
-    description: "Search across entire Notion workspace for pages, databases, or both. Use this to find anything by name or content.",
+    description: "Search across entire Notion workspace for pages, databases, or both. IMPORTANT: The response includes the actual page/database ID - use that exact ID for subsequent operations. Never make up IDs.",
     inputSchema: {
       type: "object",
       properties: {
@@ -9423,7 +9423,7 @@ var tools = [
         },
         limit: {
           type: "number",
-          description: "Maximum results to return (default: 20)"
+          description: "Maximum results to return (default: 20, max: 100)"
         }
       },
       required: ["query"]
@@ -9432,7 +9432,7 @@ var tools = [
   // ==================== PAGES ====================
   {
     name: "create_page",
-    description: "Create a new page in Notion. Can be standalone or inside another page/database.",
+    description: "Create a new page in Notion. Can be standalone or inside another page/database. Returns the new page ID.",
     inputSchema: {
       type: "object",
       properties: {
@@ -9442,11 +9442,11 @@ var tools = [
         },
         parentPageId: {
           type: "string",
-          description: "Parent page ID (creates page inside another page)"
+          description: "Parent page ID (creates page inside another page). Use exact ID from search results."
         },
         parentDatabaseId: {
           type: "string",
-          description: "Parent database ID (creates page as database entry)"
+          description: "Parent database ID (creates page as database entry). Use exact ID from search results."
         },
         content: {
           type: "string",
@@ -9522,13 +9522,13 @@ var tools = [
   },
   {
     name: "delete_page",
-    description: "Delete (archive) a page. Pages in Notion are never permanently deleted via API.",
+    description: "Delete (archive) a page. CRITICAL: Use the exact page ID from notion_search results. Never make up or guess IDs.",
     inputSchema: {
       type: "object",
       properties: {
         pageId: {
           type: "string",
-          description: "Page ID to delete"
+          description: 'Page ID to delete - must be exact ID from search results (e.g., "2c881500-2ffb-8144-825a-db0ce905661f")'
         }
       },
       required: ["pageId"]
@@ -9537,20 +9537,20 @@ var tools = [
   // ==================== DATABASES ====================
   {
     name: "list_databases",
-    description: "List all databases the integration has access to.",
+    description: "List all databases the integration has access to. Returns database IDs that can be used with query_database.",
     inputSchema: {
       type: "object",
       properties: {
         limit: {
           type: "number",
-          description: "Maximum databases to return"
+          description: "Maximum databases to return (max: 100)"
         }
       }
     }
   },
   {
     name: "query_database",
-    description: "Query a database with filters, sorts, and pagination. Use this to find specific entries.",
+    description: "Query a database with filters, sorts, and pagination. Use this to find specific entries. For sorting by time, use timestamp sort (last_edited_time or created_time) instead of property sort.",
     inputSchema: {
       type: "object",
       properties: {
@@ -9564,11 +9564,12 @@ var tools = [
         },
         sorts: {
           type: "array",
-          description: "Sort order array",
+          description: 'Sort order array. For time-based sorting use: [{"timestamp": "last_edited_time", "direction": "descending"}] or [{"timestamp": "created_time", "direction": "ascending"}]. For property sorting use: [{"property": "Name", "direction": "ascending"}]',
           items: {
             type: "object",
             properties: {
-              property: { type: "string" },
+              property: { type: "string", description: "Property name (for property sorts)" },
+              timestamp: { type: "string", enum: ["last_edited_time", "created_time"], description: "Timestamp type (for time-based sorts)" },
               direction: { type: "string", enum: ["ascending", "descending"] }
             }
           }
@@ -10352,10 +10353,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "query_database": {
         const dbId = resolveDatabaseId(args?.databaseId);
+        let processedSorts = args?.sorts;
+        if (processedSorts) {
+          processedSorts = processedSorts.map((sort) => {
+            if (sort.timestamp) {
+              return { timestamp: sort.timestamp, direction: sort.direction || "descending" };
+            }
+            return { property: sort.property, direction: sort.direction || "ascending" };
+          });
+        }
         const results = await notion.databases.query({
           database_id: dbId,
           filter: args?.filter,
-          sorts: args?.sorts,
+          sorts: processedSorts,
           page_size: args?.limit || 100
         });
         const formatted = formatDatabaseResults(results.results);

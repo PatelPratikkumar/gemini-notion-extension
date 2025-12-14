@@ -73,11 +73,11 @@ gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-exte
 Then run the setup script from the extension directory:
 ```bash
 # Windows
-cd ~/.gemini/extensions/notion-sync
+cd ~/.gemini/extensions/notion-extension
 .\setup-windows.ps1
 
 # macOS/Linux  
-cd ~/.gemini/extensions/notion-sync
+cd ~/.gemini/extensions/notion-extension
 chmod +x setup-unix.sh && ./setup-unix.sh
 ```
 
@@ -328,14 +328,15 @@ Search for all pages mentioning "authentication"
 
 ```json
 {
-  "name": "notion-sync",
+  "name": "notion-extension",
   "description": "Full Notion workspace integration",
-  "mcp_servers": [{
-    "name": "0",
-    "type": "local",
-    "command": "node",
-    "args": ["./dist/server.js"]
-  }]
+  "mcpServers": {
+    "notion": {
+      "command": "node",
+      "args": ["dist/bundle.js"],
+      "timeout": 30
+    }
+  }
 }
 ```
 
@@ -522,7 +523,7 @@ Make sure you've run the setup script or set the credential manually:
 ### "Extension not loading"
 
 1. Rebuild: `npm run build`
-2. Relink: `gemini extensions uninstall notion-sync && gemini extensions link .`
+2. Relink: `gemini extensions uninstall notion-extension && gemini extensions link .`
 
 ### "API errors" or "object not found"
 

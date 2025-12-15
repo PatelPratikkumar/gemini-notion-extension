@@ -1,11 +1,11 @@
-# 📝 Gemini CLI Notion Extension v3.0 Enhanced Edition
+# 📝 Gemini CLI Notion Extension v3.0.1 Enhanced Edition
 
 > Complete Notion workspace automation with [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-Extension-blue.svg)](https://github.com/google-gemini/gemini-cli)
-[![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
+[![Version](https://img.shields.io/badge/Version-3.0.1-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
 
 Transform your Notion workspace into a powerful automation hub with 46 comprehensive tools, file processing, database templates, and intelligent monitoring.
 
@@ -64,154 +64,395 @@ Before installing, you need:
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Installation & Setup
 
-### Option A: Install from GitHub (Recommended for Auto-Updates)
+### 📖 **IMPORTANT: Two-Step Installation Process**
 
-**For automatic updates with `gemini extensions update`:**
+The Notion extension requires **both extension installation AND MCP server registration** for tools to work:
+
+1. **Extension Installation**: Provides metadata, commands, and context
+2. **MCP Server Registration**: Enables the 46 Notion tools in Gemini CLI
+
+**If you skip step 2, you'll get "Tool not found" errors.**
+
+---
+
+### 🏃‍♂️ **Quick Setup (Recommended)**
+
 ```bash
+# 1. Install extension with auto-update
 gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+
+# 2. Get your Notion API token (see section below)
+# Set as environment variable:
+setx NOTION_API_KEY "your_notion_token_here"  # Windows
+export NOTION_API_KEY="your_notion_token_here"  # macOS/Linux
+
+# 3. Register MCP server for tool access
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" -e NOTION_API_KEY="${NOTION_API_KEY}" --timeout 30000 -s user
+
+# 4. Verify installation
+gemini mcp list
+# Should show: ✓ notion: ... - Connected
+
+# 5. Test tools
+echo "List my Notion databases" | gemini chat
 ```
 
-Then run the setup script from the extension directory:
-```bash
-# Windows
-cd ~/.gemini/extensions/notion-extension
-.\setup-windows.ps1
+---
 
-# macOS/Linux  
-cd ~/.gemini/extensions/notion-extension
-chmod +x setup-unix.sh && ./setup-unix.sh
-```
+### 📋 **Prerequisites**
 
-### Option B: Clone and Build Manually (For Development)
+Before installing, ensure you have:
 
-**For local development and custom modifications:**
+1. **Node.js 18+** - [Download here](https://nodejs.org/)
+2. **Gemini CLI** - Install globally:
+   ```bash
+   npm install -g @google/gemini-cli
+   ```
+3. **Notion Integration Token** - Get yours below 👇
 
-#### 1. Clone the Repository
+---
 
-```bash
-git clone https://github.com/PatelPratikkumar/gemini-notion-extension.git
-cd gemini-notion-extension
-```
+### 🔐 **Getting Your Notion API Token**
 
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Create Notion Integration
-
-1. Go to [Notion Integrations](https://www.notion.so/my-integrations)
-2. Click **"+ New integration"**
-3. Configure:
+1. Log in to [Notion](https://www.notion.so)
+2. Go to [My Integrations](https://www.notion.so/my-integrations)
+3. Click **"+ New integration"**
+4. Configure:
    - **Name**: `Gemini CLI Extension`
    - **Associated workspace**: Select your workspace
    - **Capabilities**: Check all Content, Comment, and User capabilities
-4. Click **"Submit"**
-5. Copy the **Internal Integration Token** (starts with `secret_`)
+5. Click **"Submit"**
+6. Copy the **Internal Integration Token** (starts with `ntn_`)
 
-### 4. Share Pages with Integration
+> ⚠️ **Keep your token secret!** Never share it or commit it to git.
 
-In Notion, share the pages/databases you want to access:
+### 🔗 **Share Pages with Integration**
+
+In Notion, grant access to pages/databases you want to use:
 1. Open a page or database
 2. Click **"Share"** (top right)
 3. Click **"Add connections"** or **"Invite"**
 4. Select **"Gemini CLI Extension"**
 
-### 5. Run Setup Script
+---
 
-<details>
-<summary><strong>🪟 Windows (PowerShell)</strong></summary>
+### 🎯 **Installation Methods**
 
-```powershell
-.\setup-windows.ps1
-```
+#### **Method A: Auto-Update Installation (Recommended)**
 
-The script will:
-1. Prompt for your Notion token (hidden input)
-2. Test the connection
-3. Show all accessible databases
-4. Let you select Project and Conversation databases
-5. Create Conversation database if needed
-6. Save configuration securely
-
-**Where is my token stored?**
-- User environment variable: `NOTION_API_KEY`
-- Database IDs: `.notion-cache.json` (local file)
-
-</details>
-
-<details>
-<summary><strong>🍎 macOS</strong></summary>
+**For production use with automatic updates:**
 
 ```bash
-chmod +x setup-unix.sh
-./setup-unix.sh
+# 1. Install extension from GitHub
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+
+# 2. Set environment variable (choose your OS)
+# Windows (PowerShell - restart terminal after):
+setx NOTION_API_KEY "ntn_your_token_here"
+
+# macOS/Linux (add to ~/.bashrc or ~/.zshrc):
+echo 'export NOTION_API_KEY="ntn_your_token_here"' >> ~/.bashrc
+source ~/.bashrc
+
+# 3. Register MCP server (critical step!)
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 30000 \
+  -s user
+
+# 4. Verify setup
+gemini mcp list
+echo "What Notion tools do you have?" | gemini chat
 ```
 
-The script will:
-1. Prompt for your Notion token
-2. Test the connection
-3. Store token in **macOS Keychain** (secure)
-4. Configure databases automatically
-
-**Where is my token stored?**
-- macOS Keychain: `gemini-notion-extension` service
-- Retrieve manually: `security find-generic-password -s "gemini-notion-extension" -a "NOTION_API_KEY" -w`
-
-</details>
-
-<details>
-<summary><strong>🐧 Linux</strong></summary>
-
+**Future updates:**
 ```bash
-chmod +x setup-unix.sh
-./setup-unix.sh
+# Update extension
+gemini extensions update notion-extension
+
+# MCP server automatically uses updated code
+# No additional steps needed
 ```
 
-**Prerequisites:**
-- `secret-tool` (libsecret): `sudo apt install libsecret-tools` (Debian/Ubuntu)
-- GNOME Keyring or KDE Wallet running
+#### **Method B: Development Installation**
 
-The script will:
-1. Prompt for your Notion token
-2. Test the connection  
-3. Store token in **GNOME Keyring/libsecret** (secure)
-4. Configure databases automatically
-
-**Where is my token stored?**
-- libsecret: `gemini-notion-extension` service
-- Retrieve manually: `secret-tool lookup service gemini-notion-extension account NOTION_API_KEY`
-
-</details>
-
-### 6. Build the Extension
+**For local development and custom modifications:**
 
 ```bash
+# 1. Clone repository
+git clone https://github.com/PatelPratikkumar/gemini-notion-extension.git
+cd gemini-notion-extension
+
+# 2. Install dependencies
+npm install
+
+# 3. Set environment variable
+# Windows:
+setx NOTION_API_KEY "ntn_your_token_here"
+
+# macOS/Linux:
+echo 'export NOTION_API_KEY="ntn_your_token_here"' >> ~/.bashrc
+source ~/.bashrc
+
+# 4. Build extension
 npm run build
-```
 
-### 7. Link to Gemini CLI
-
-```bash
+# 5. Link extension
 gemini extensions link .
+
+# 6. Register MCP server with local path
+gemini mcp add notion node "$(pwd)/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 30000 \
+  -s user
+
+# 7. Verify setup
+gemini mcp list
 ```
 
-### 8. Start Using!
+**Development workflow:**
+```bash
+# After making changes:
+npm run build
+
+# MCP server automatically uses updated code
+# No need to re-register
+```
+
+#### **Method C: Automated Setup Script**
+
+**For guided setup with automatic configuration:**
 
 ```bash
-gemini
+# 1. Install extension
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+
+# 2. Navigate to extension directory
+cd ~/.gemini/extensions/notion-extension
+
+# 3. Run setup script (guides you through token setup and database configuration)
+# Windows:
+.\setup-windows.ps1
+
+# macOS/Linux:
+chmod +x setup-unix.sh && ./setup-unix.sh
+
+# 4. Register MCP server (still required after setup)
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 30000 \
+  -s user
 ```
 
-Then try commands like:
+---
+
+## 🗑️ **Uninstallation**
+
+### **Complete Removal**
+
+```bash
+# 1. Remove MCP server
+gemini mcp remove notion
+
+# 2. Uninstall extension
+gemini extensions uninstall notion-extension
+
+# 3. Clean environment variables (optional)
+# Windows:
+reg delete "HKCU\Environment" /v "NOTION_API_KEY" /f
+
+# macOS/Linux (remove line from ~/.bashrc):
+grep -v "NOTION_API_KEY" ~/.bashrc > ~/.bashrc.tmp && mv ~/.bashrc.tmp ~/.bashrc
+source ~/.bashrc
+
+# 4. Remove cached data (optional)
+rm ~/.notion-cache.json  # If exists
+rm ~/.gemini/extensions/notion-extension/ -rf  # If exists
 ```
-List my databases
-Show active projects
-Search for pages about API
-Export this conversation
+
+### **Partial Removal (Keep Extension, Remove MCP Server)**
+
+```bash
+# Remove MCP server only (keeps extension for context/commands)
+gemini mcp remove notion
+
+# Extension remains available but tools won't work
+# To restore tools, re-run: gemini mcp add notion...
 ```
+
+---
+
+## 🔧 **Troubleshooting**
+
+### **"Tool not found" Errors**
+
+**Symptom**: Extension shows as loaded but Notion tools don't work
+
+```bash
+# 1. Check if MCP server is registered
+gemini mcp list
+# Should show: ✓ notion: ... - Connected
+
+# 2. If missing or disconnected, register MCP server:
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 30000 \
+  -s user
+
+# 3. Verify environment variable
+echo $NOTION_API_KEY  # Should start with 'secret_' or 'ntn_'
+
+# 4. Test connection
+echo "List my Notion databases" | gemini chat
+```
+
+### **MCP Server Disconnected**
+
+**Symptom**: `gemini mcp list` shows "Disconnected" or "Failed"
+
+```bash
+# 1. Check MCP server logs
+gemini mcp logs notion
+
+# 2. Increase timeout and re-register
+gemini mcp remove notion
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 60000 \
+  -s user
+
+# 3. Check Node.js version (requires 18+)
+node --version
+```
+
+### **Invalid Notion Token**
+
+**Symptom**: "Unauthorized" or "Invalid token" errors
+
+```bash
+# 1. Verify token format
+echo $NOTION_API_KEY
+# Should start with 'secret_' (old format) or 'ntn_' (new format)
+
+# 2. Test token directly
+curl -H "Authorization: Bearer $NOTION_API_KEY" \
+     -H "Notion-Version: 2022-06-28" \
+     https://api.notion.com/v1/users/me
+
+# 3. If invalid, get new token from Notion integrations
+# Then update environment variable:
+setx NOTION_API_KEY "your_new_token"  # Windows
+export NOTION_API_KEY="your_new_token"  # macOS/Linux
+```
+
+### **Extension Version Conflicts**
+
+**Symptom**: Tools work intermittently after updates
+
+```bash
+# 1. Check extension versions
+gemini extensions list
+
+# 2. Force clean reinstall
+gemini extensions uninstall notion-extension
+gemini mcp remove notion
+gemini extensions install https://github.com/PatelPratikkumar/gemini-notion-extension --auto-update
+
+# 3. Re-register MCP server with updated path
+gemini mcp add notion node "~/.gemini/extensions/notion-extension/dist/bundle.js" \
+  -e NOTION_API_KEY="${NOTION_API_KEY}" \
+  --timeout 30000 \
+  -s user
+```
+
+### **Environment Variable Issues**
+
+**Windows PowerShell:**
+```powershell
+# Check if variable exists
+echo $env:NOTION_API_KEY
+
+# Set permanently
+[Environment]::SetEnvironmentVariable("NOTION_API_KEY", "your_token", "User")
+
+# Restart PowerShell/terminal after setting
+```
+
+**macOS/Linux:**
+```bash
+# Check if variable exists
+echo $NOTION_API_KEY
+
+# Add to shell profile (choose your shell)
+echo 'export NOTION_API_KEY="your_token"' >> ~/.bashrc  # Bash
+echo 'export NOTION_API_KEY="your_token"' >> ~/.zshrc   # Zsh
+source ~/.bashrc  # Or ~/.zshrc
+```
+
+### **Common Error Messages**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Tool "notion_list_databases" not found` | MCP server not registered | Run `gemini mcp add notion...` |
+| `MCP server 'notion' failed to start` | Invalid bundle path or environment | Check file path and `$NOTION_API_KEY` |
+| `Request timed out` | Slow Notion API response | Increase `--timeout` to 60000 |
+| `Unauthorized` | Invalid/expired token | Get new token from Notion integrations |
+| `No databases found` | Pages not shared with integration | Share pages in Notion |
+
+---
+
+## ✅ **Testing Your Installation**
+
+### **Quick Verification**
+
+```bash
+# 1. Check extension status
+gemini extensions list
+# Should show: ✓ notion-extension v3.0.1
+
+# 2. Check MCP server status
+gemini mcp list
+# Should show: ✓ notion: ... - Connected
+
+# 3. Test tool registry
+echo "What Notion tools do you have available?" | gemini chat
+# Should list 46 Notion tools
+
+# 4. Test basic functionality
+echo "List my Notion databases" | gemini chat
+# Should show your accessible databases
+```
+
+### **Comprehensive Testing**
+
+```bash
+# Database operations
+echo "Show me all my Notion databases with their properties" | gemini chat
+echo "Query my Tasks database for incomplete items" | gemini chat
+
+# Page operations
+echo "Create a test page called 'Gemini CLI Test' with some content" | gemini chat
+echo "Search for pages containing 'test'" | gemini chat
+
+# Advanced features
+echo "Get analytics for my most accessed database" | gemini chat
+echo "Export my Tasks database to CSV format" | gemini chat
+```
+
+### **Expected Results**
+
+✅ **Working Installation**:
+- Extension appears in `gemini extensions list`
+- MCP server shows as "Connected" in `gemini mcp list`
+- All 46 Notion tools are available and functional
+- Can list databases, create pages, and search content
+
+❌ **Common Issues**:
+- **"Tool not found"** = MCP server not registered (run `gemini mcp add...`)
+- **"Unauthorized"** = Invalid token or pages not shared
+- **"Disconnected"** = Check Node.js version and increase timeout
 
 ---
 

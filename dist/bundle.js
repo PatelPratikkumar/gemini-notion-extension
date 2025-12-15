@@ -11069,12 +11069,32 @@ function parsePageId(input) {
   }
   return input.replace(/-/g, "");
 }
-function resolveDatabaseId(id) {
-  if (id === "conversations")
+function resolveDatabaseId(nameOrId) {
+  console.error(`\u{1F50D} Resolving database: '${nameOrId}'`);
+  if (nameOrId === "conversations") {
+    if (!conversationDbId) {
+      throw new Error("Conversation database not configured. Please run setup or provide a valid database ID.");
+    }
     return conversationDbId;
-  if (id === "projects")
+  }
+  if (nameOrId === "projects") {
+    if (!projectDbId) {
+      throw new Error("Project database not configured. Please run setup or provide a valid database ID.");
+    }
     return projectDbId;
-  return id;
+  }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nameOrId)) {
+    console.error(`\u2713 Using database ID directly: ${nameOrId}`);
+    return nameOrId;
+  }
+  const cleaned = nameOrId.replace(/-/g, "");
+  if (cleaned.length === 32) {
+    const formatted = `${cleaned.substr(0, 8)}-${cleaned.substr(8, 4)}-${cleaned.substr(12, 4)}-${cleaned.substr(16, 4)}-${cleaned.substr(20, 12)}`;
+    console.error(`\u2713 Formatted database ID: ${formatted}`);
+    return formatted;
+  }
+  console.error(`\u26A0\uFE0F Using database identifier as-is: ${nameOrId}`);
+  return nameOrId;
 }
 function markdownToBlocks(markdown) {
   const blocks = [];
@@ -11303,7 +11323,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       // ==================== PAGES ====================
       case "create_page": {
-        const parent = args?.parentDatabaseId ? { database_id: resolveDatabaseId(args.parentDatabaseId) } : { page_id: parsePageId(args?.parentPageId || conversationDbId) };
+        let parent;
+        if (args?.parentDatabaseId) {
+          const resolvedDbId = resolveDatabaseId(args.parentDatabaseId);
+          parent = { database_id: resolvedDbId };
+          console.error(`\u{1F3AF} Creating page in database: ${resolvedDbId}`);
+        } else if (args?.parentPageId) {
+          const resolvedPageId = parsePageId(args.parentPageId);
+          parent = { page_id: resolvedPageId };
+          console.error(`\u{1F4C4} Creating page under parent: ${resolvedPageId}`);
+        } else if (conversationDbId) {
+          parent = { page_id: parsePageId(conversationDbId) };
+          console.error(`\u{1F4AC} Creating page in conversation database: ${conversationDbId}`);
+        } else {
+          return error("No parent specified. Please provide either parentDatabaseId or parentPageId, or ensure conversation database is configured.");
+        }
         let properties;
         if (args?.parentDatabaseId) {
           properties = args?.properties || {};

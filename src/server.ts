@@ -1205,10 +1205,39 @@ function parsePageId(input: string): string {
 /**
  * Resolve database ID shortcuts
  */
-function resolveDatabaseId(id: string): string {
-  if (id === 'conversations') return conversationDbId;
-  if (id === 'projects') return projectDbId;
-  return id;
+function resolveDatabaseId(nameOrId: string): string {
+  console.error(`🔍 Resolving database: '${nameOrId}'`);
+  
+  if (nameOrId === 'conversations') {
+    if (!conversationDbId) {
+      throw new Error('Conversation database not configured. Please run setup or provide a valid database ID.');
+    }
+    return conversationDbId;
+  }
+  if (nameOrId === 'projects') {
+    if (!projectDbId) {
+      throw new Error('Project database not configured. Please run setup or provide a valid database ID.');
+    } 
+    return projectDbId;
+  }
+  
+  // Check if it's already a UUID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nameOrId)) {
+    console.error(`✓ Using database ID directly: ${nameOrId}`);
+    return nameOrId;
+  }
+  
+  // Check if it's a Notion URL or ID format
+  const cleaned = nameOrId.replace(/-/g, '');
+  if (cleaned.length === 32) {
+    const formatted = `${cleaned.substr(0, 8)}-${cleaned.substr(8, 4)}-${cleaned.substr(12, 4)}-${cleaned.substr(16, 4)}-${cleaned.substr(20, 12)}`;
+    console.error(`✓ Formatted database ID: ${formatted}`);
+    return formatted;
+  }
+  
+  // If all else fails, return as-is and let Notion API handle it
+  console.error(`⚠️ Using database identifier as-is: ${nameOrId}`);
+  return nameOrId;
 }
 
 /**
@@ -1505,9 +1534,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // ==================== PAGES ====================
       case 'create_page': {
-        const parent: any = args?.parentDatabaseId 
-          ? { database_id: resolveDatabaseId(args.parentDatabaseId as string) }
-          : { page_id: parsePageId(args?.parentPageId as string || conversationDbId) };
+        let parent: any;
+        
+        if (args?.parentDatabaseId) {
+          // Creating in a specific database
+          const resolvedDbId = resolveDatabaseId(args.parentDatabaseId as string);
+          parent = { database_id: resolvedDbId };
+          console.error(`🎯 Creating page in database: ${resolvedDbId}`);
+        } else if (args?.parentPageId) {
+          // Creating under a specific page
+          const resolvedPageId = parsePageId(args.parentPageId as string);
+          parent = { page_id: resolvedPageId };
+          console.error(`📄 Creating page under parent: ${resolvedPageId}`);
+        } else if (conversationDbId) {
+          // Fallback to conversation database
+          parent = { page_id: parsePageId(conversationDbId) };
+          console.error(`💬 Creating page in conversation database: ${conversationDbId}`);
+        } else {
+          return error('No parent specified. Please provide either parentDatabaseId or parentPageId, or ensure conversation database is configured.');
+        }
         
         let properties: any;
         if (args?.parentDatabaseId) {

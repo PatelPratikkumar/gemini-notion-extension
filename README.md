@@ -1,11 +1,11 @@
-# 📝 Gemini CLI Notion Extension v3.0.3 Enhanced Edition
+# 📝 Gemini CLI Notion Extension v3.0.4 Enhanced Edition
 
 > Complete Notion workspace automation with [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-Extension-blue.svg)](https://github.com/google-gemini/gemini-cli)
-[![Version](https://img.shields.io/badge/Version-3.0.3-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
+[![Version](https://img.shields.io/badge/Version-3.0.4-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
 
 Transform your Notion workspace into a powerful automation hub with 46 comprehensive tools, file processing, database templates, and intelligent monitoring.
 

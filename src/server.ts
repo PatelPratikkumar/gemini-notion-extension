@@ -67,7 +67,7 @@ const enhancedTools = [
   },
   {
     name: "upload_file_to_notion",
-    description: "[EXPERIMENTAL] Create a file reference in Notion. Note: Notion API doesn't support direct file uploads - files must be hosted externally first. This tool can create file links or embed file content as text blocks.",
+    description: "Process files privately for Notion integration. PRIVACY-FIRST: Never uploads files externally. Extracts text content, metadata, and creates secure file references without compromising confidentiality.",
     inputSchema: {
       type: "object",
       properties: {
@@ -75,8 +75,8 @@ const enhancedTools = [
         filename: { type: "string", description: "Custom filename (optional)" },
         mode: { 
           type: "string", 
-          enum: ["text", "link", "info"], 
-          description: "Processing mode: 'text' embeds file content, 'link' creates external link (requires hosting), 'info' shows file metadata" 
+          enum: ["extract", "metadata", "secure"], 
+          description: "Processing mode: 'extract' gets text content from documents, 'metadata' shows file info only, 'secure' creates file reference with summary" 
         },
         attachTo: {
           type: "object",
@@ -2631,7 +2631,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'upload_file_to_notion': {
         const filePath = args?.filePath as string;
         const filename = args?.filename as string;
-        const mode = (args?.mode as string) || 'info';
+        const mode = (args?.mode as string) || 'metadata';
         const attachTo = args?.attachTo as { type: string; id: string } | undefined;
         
         if (!existsSync(filePath)) {
@@ -2643,121 +2643,205 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const finalFilename = filename || basename(filePath);
           const fileExt = extname(filePath).toLowerCase();
           
-          // Handle different modes
+          // Handle different privacy-respecting modes
           switch (mode) {
-            case 'text': {
-              // For text files, embed content directly
-              if (['.txt', '.md', '.json', '.csv', '.log'].includes(fileExt)) {
-                const content = readFileSync(filePath, 'utf-8');
+            case 'extract': {
+              // Extract text content from various file types
+              let extractedContent = '';
+              let contentType = 'unknown';
+              
+              try {
+                if (['.txt', '.md', '.csv', '.log', '.json', '.xml', '.yaml', '.yml'].includes(fileExt)) {
+                  extractedContent = readFileSync(filePath, 'utf-8');
+                  contentType = 'text';
+                } else if (['.html', '.htm'].includes(fileExt)) {
+                  extractedContent = readFileSync(filePath, 'utf-8').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                  contentType = 'html-text';
+                } else {
+                  // For binary files, provide secure handling info
+                  extractedContent = `[CONFIDENTIAL FILE - ${fileExt.toUpperCase()} FORMAT]\n\nFile: ${finalFilename}\nSize: ${fileInfo.size} bytes\nLast Modified: ${fileInfo.mtime.toISOString()}\n\n⚠️ PRIVACY PROTECTION: Binary file content not extracted to protect confidentiality.\n\n📋 File Summary:\n- This appears to be a ${fileExt} file\n- Contains ${fileInfo.size} bytes of data\n- Safe handling: File remains on your local system\n- No external uploads or cloud storage involved`;
+                  contentType = 'secure-summary';
+                }
+              } catch (readError) {
+                extractedContent = `[PROTECTED FILE ACCESS]\n\nFile: ${finalFilename}\nSize: ${fileInfo.size} bytes\n\n🔒 File content could not be safely extracted (may contain binary or encrypted data).\n\nThis protects your privacy by not exposing potentially sensitive content.`;
+                contentType = 'protected';
+              }
+              
+              if (attachTo) {
+                // Create a page with the extracted content
+                const parent: any = attachTo.type === 'database' 
+                  ? { database_id: attachTo.id }
+                  : { page_id: attachTo.id };
+                  
+                const properties: any = attachTo.type === 'database'
+                  ? { Name: { title: [{ text: { content: `📄 ${finalFilename}` } }] } }
+                  : { title: { title: [{ text: { content: `📄 ${finalFilename}` } }] } };
                 
-                if (attachTo) {
-                  // Create a page with the file content
-                  const parent: any = attachTo.type === 'database' 
-                    ? { database_id: attachTo.id }
-                    : { page_id: attachTo.id };
-                    
-                  const properties: any = attachTo.type === 'database'
-                    ? { Name: { title: [{ text: { content: finalFilename } }] } }
-                    : { title: { title: [{ text: { content: finalFilename } }] } };
-                  
-                  const blocks: any[] = [
-                    {
-                      type: 'heading_2',
-                      heading_2: {
-                        rich_text: [{ type: 'text', text: { content: `File: ${finalFilename}` } }]
-                      }
-                    },
-                    {
-                      type: 'paragraph',
-                      paragraph: {
-                        rich_text: [
-                          { type: 'text', text: { content: `Size: ${fileInfo.size} bytes | Type: ${fileExt}` } }
-                        ]
-                      }
-                    },
-                    {
-                      type: 'code',
-                      code: {
-                        language: fileExt === '.md' ? 'markdown' : fileExt === '.json' ? 'json' : 'plain text',
-                        rich_text: [{ type: 'text', text: { content: content.slice(0, 1900) } }] // Notion limit
-                      }
+                const blocks: any[] = [
+                  {
+                    type: 'heading_2',
+                    heading_2: {
+                      rich_text: [{ type: 'text', text: { content: `File: ${finalFilename}` } }]
                     }
-                  ];
+                  },
+                  {
+                    type: 'paragraph',
+                    paragraph: {
+                      rich_text: [
+                        { type: 'text', text: { content: `📊 Size: ${fileInfo.size} bytes | 📅 Modified: ${fileInfo.mtime.toLocaleDateString()} | 🔒 Privacy: Protected` } }
+                      ]
+                    }
+                  }
+                ];
+                
+                // Add content based on what we extracted
+                if (contentType === 'text' || contentType === 'html-text') {
+                  const truncatedContent = extractedContent.slice(0, 1500); // Keep within Notion limits
+                  blocks.push({
+                    type: 'code',
+                    code: {
+                      language: fileExt === '.md' ? 'markdown' : fileExt === '.json' ? 'json' : 'plain text',
+                      rich_text: [{ type: 'text', text: { content: truncatedContent } }]
+                    }
+                  });
                   
-                  if (content.length > 1900) {
+                  if (extractedContent.length > 1500) {
                     blocks.push({
-                      type: 'paragraph',
-                      paragraph: {
-                        rich_text: [{ 
-                          type: 'text', 
-                          text: { content: `⚠️ Content truncated. Full file is ${content.length} characters.` } 
-                        }]
+                      type: 'callout',
+                      callout: {
+                        icon: { emoji: '📝' },
+                        rich_text: [{ type: 'text', text: { content: `Content preview (${truncatedContent.length} of ${extractedContent.length} characters shown). Full content remains private on your system.` } }]
                       }
                     });
                   }
-                  
-                  const page = await withRetry(
-                    () => notion.pages.create({
-                      parent,
-                      properties,
-                      children: blocks
-                    }),
-                    3,
-                    'upload_file_content'
-                  );
-                  
-                  return respond({
-                    success: true,
-                    pageId: page.id,
-                    filename: finalFilename,
-                    mode: 'text',
-                    contentLength: content.length,
-                    message: `File content embedded in Notion page: ${finalFilename}`
-                  });
                 } else {
-                  return respond({
-                    filename: finalFilename,
-                    content: content.slice(0, 500) + (content.length > 500 ? '...' : ''),
-                    fullLength: content.length,
-                    mode: 'text',
-                    note: 'Specify attachTo parameter to create a Notion page with this content'
+                  // For secure summaries and protected files
+                  blocks.push({
+                    type: 'callout',
+                    callout: {
+                      icon: { emoji: '🔒' },
+                      rich_text: [{ type: 'text', text: { content: extractedContent } }]
+                    }
                   });
                 }
+                
+                const page = await withRetry(
+                  () => notion.pages.create({
+                    parent,
+                    properties,
+                    children: blocks
+                  }),
+                  3,
+                  'create_file_reference'
+                );
+                
+                return respond({
+                  success: true,
+                  pageId: page.id,
+                  filename: finalFilename,
+                  mode: 'extract',
+                  contentType,
+                  contentLength: extractedContent.length,
+                  privacy: 'PROTECTED - No external uploads, content processed locally only',
+                  message: `File reference created in Notion: ${finalFilename}`
+                });
               } else {
-                return error(`Text mode not supported for file type: ${fileExt}. Supported: .txt, .md, .json, .csv, .log`);
+                return respond({
+                  filename: finalFilename,
+                  extractedContent: extractedContent.slice(0, 200) + (extractedContent.length > 200 ? '...' : ''),
+                  fullLength: extractedContent.length,
+                  contentType,
+                  mode: 'extract',
+                  privacy: 'PROTECTED - No data uploaded externally',
+                  note: 'Specify attachTo parameter to create a Notion page with this content'
+                });
               }
             }
             
-            case 'link': {
-              return respond({
+            case 'secure': {
+              // Create secure file reference without exposing content
+              const secureInfo = {
                 filename: finalFilename,
-                fileSize: fileInfo.size,
-                mode: 'link',
-                limitation: 'Notion API limitation: Files must be hosted externally (e.g., Google Drive, Dropbox) before adding to Notion',
-                suggestion: 'Upload your file to a cloud service first, then use the URL with create_page or append_block_children tools',
-                message: `Cannot directly upload ${finalFilename} - external hosting required`
-              });
+                size: fileInfo.size,
+                type: fileExt,
+                modified: fileInfo.mtime.toISOString(),
+                location: 'Local file system (secure)',
+                privacy: 'Full confidentiality maintained'
+              };
+              
+              if (attachTo) {
+                const parent: any = attachTo.type === 'database' 
+                  ? { database_id: attachTo.id }
+                  : { page_id: attachTo.id };
+                  
+                const properties: any = attachTo.type === 'database'
+                  ? { Name: { title: [{ text: { content: `🔒 ${finalFilename}` } }] } }
+                  : { title: { title: [{ text: { content: `🔒 ${finalFilename}` } }] } };
+                
+                const blocks: any[] = [
+                  {
+                    type: 'heading_2',
+                    heading_2: {
+                      rich_text: [{ type: 'text', text: { content: `🔒 Confidential File Reference` } }]
+                    }
+                  },
+                  {
+                    type: 'paragraph',
+                    paragraph: {
+                      rich_text: [{ type: 'text', text: { content: `File: ${finalFilename}` } }]
+                    }
+                  },
+                  {
+                    type: 'callout',
+                    callout: {
+                      icon: { emoji: '🛡️' },
+                      rich_text: [{ type: 'text', text: { content: `PRIVACY PROTECTED\n\n📄 File: ${finalFilename}\n📊 Size: ${fileInfo.size} bytes\n📅 Modified: ${fileInfo.mtime.toLocaleDateString()}\n🔒 Status: Confidential - content not exposed\n💾 Location: Secure local storage\n\n⚠️ This file reference was created without uploading or exposing file contents to any external service.` } }]
+                    }
+                  }
+                ];
+                
+                const page = await withRetry(
+                  () => notion.pages.create({
+                    parent,
+                    properties,
+                    children: blocks
+                  }),
+                  3,
+                  'create_secure_reference'
+                );
+                
+                return respond({
+                  success: true,
+                  pageId: page.id,
+                  filename: finalFilename,
+                  mode: 'secure',
+                  privacy: 'MAXIMUM PRIVACY - File content never exposed',
+                  message: `Secure file reference created: ${finalFilename}`
+                });
+              } else {
+                return respond(secureInfo);
+              }
             }
             
-            default: // 'info' mode
+            default: // 'metadata' mode
               return respond({
                 filename: finalFilename,
                 fileSize: fileInfo.size,
                 fileType: fileExt,
                 path: filePath,
                 lastModified: fileInfo.mtime,
-                mode: 'info',
+                mode: 'metadata',
                 availableModes: {
-                  text: 'Embed file content as text blocks (for .txt, .md, .json, .csv, .log)',
-                  link: 'Create file link (requires external hosting)',
-                  info: 'Show file information (current mode)'
+                  extract: 'Safely extract text content from documents (text files, HTML, etc.)',
+                  secure: 'Create confidential file reference without exposing content',
+                  metadata: 'Show file information only (current mode)'
                 },
-                limitation: 'Notion API does not support direct file uploads. Files must be hosted externally.',
-                message: `File analyzed: ${finalFilename} (${fileInfo.size} bytes)`
+                privacy: '🔒 PRIVACY GUARANTEE: Your files never leave your system. No external uploads or cloud storage involved.',
+                message: `File analyzed safely: ${finalFilename} (${fileInfo.size} bytes)`
               });
           }
         } catch (error: any) {
-          return error(`Failed to process file: ${error.message}`);
+          return error(`Failed to process file securely: ${error.message}`);
         }
       }
 

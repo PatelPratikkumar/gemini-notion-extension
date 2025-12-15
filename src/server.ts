@@ -67,16 +67,21 @@ const enhancedTools = [
   },
   {
     name: "upload_file_to_notion",
-    description: "Upload files directly to Notion using enhanced API capabilities. Supports various file types with automatic metadata extraction.",
+    description: "[EXPERIMENTAL] Create a file reference in Notion. Note: Notion API doesn't support direct file uploads - files must be hosted externally first. This tool can create file links or embed file content as text blocks.",
     inputSchema: {
       type: "object",
       properties: {
-        filePath: { type: "string", description: "Local file path to upload" },
+        filePath: { type: "string", description: "Local file path to process" },
         filename: { type: "string", description: "Custom filename (optional)" },
+        mode: { 
+          type: "string", 
+          enum: ["text", "link", "info"], 
+          description: "Processing mode: 'text' embeds file content, 'link' creates external link (requires hosting), 'info' shows file metadata" 
+        },
         attachTo: {
           type: "object",
           properties: {
-            type: { type: "string", enum: ["page", "database"], description: "Where to attach the file" },
+            type: { type: "string", enum: ["page", "database"], description: "Where to attach the file reference" },
             id: { type: "string", description: "Page or database ID" }
           },
           required: ["type", "id"]
@@ -2624,22 +2629,135 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'upload_file_to_notion': {
-        // For now, simulate file upload since direct file upload requires specific API version
         const filePath = args?.filePath as string;
         const filename = args?.filename as string;
+        const mode = (args?.mode as string) || 'info';
+        const attachTo = args?.attachTo as { type: string; id: string } | undefined;
+        
+        if (!existsSync(filePath)) {
+          return error(`File not found: ${filePath}`);
+        }
         
         try {
           const fileInfo = statSync(filePath);
           const finalFilename = filename || basename(filePath);
+          const fileExt = extname(filePath).toLowerCase();
           
-          return respond({
-            filename: finalFilename,
-            fileSize: fileInfo.size,
-            uploadPath: filePath,
-            message: `File "${finalFilename}" prepared for upload (${fileInfo.size} bytes)`
-          });
+          // Handle different modes
+          switch (mode) {
+            case 'text': {
+              // For text files, embed content directly
+              if (['.txt', '.md', '.json', '.csv', '.log'].includes(fileExt)) {
+                const content = readFileSync(filePath, 'utf-8');
+                
+                if (attachTo) {
+                  // Create a page with the file content
+                  const parent: any = attachTo.type === 'database' 
+                    ? { database_id: attachTo.id }
+                    : { page_id: attachTo.id };
+                    
+                  const properties: any = attachTo.type === 'database'
+                    ? { Name: { title: [{ text: { content: finalFilename } }] } }
+                    : { title: { title: [{ text: { content: finalFilename } }] } };
+                  
+                  const blocks: any[] = [
+                    {
+                      type: 'heading_2',
+                      heading_2: {
+                        rich_text: [{ type: 'text', text: { content: `File: ${finalFilename}` } }]
+                      }
+                    },
+                    {
+                      type: 'paragraph',
+                      paragraph: {
+                        rich_text: [
+                          { type: 'text', text: { content: `Size: ${fileInfo.size} bytes | Type: ${fileExt}` } }
+                        ]
+                      }
+                    },
+                    {
+                      type: 'code',
+                      code: {
+                        language: fileExt === '.md' ? 'markdown' : fileExt === '.json' ? 'json' : 'plain text',
+                        rich_text: [{ type: 'text', text: { content: content.slice(0, 1900) } }] // Notion limit
+                      }
+                    }
+                  ];
+                  
+                  if (content.length > 1900) {
+                    blocks.push({
+                      type: 'paragraph',
+                      paragraph: {
+                        rich_text: [{ 
+                          type: 'text', 
+                          text: { content: `⚠️ Content truncated. Full file is ${content.length} characters.` } 
+                        }]
+                      }
+                    });
+                  }
+                  
+                  const page = await withRetry(
+                    () => notion.pages.create({
+                      parent,
+                      properties,
+                      children: blocks
+                    }),
+                    3,
+                    'upload_file_content'
+                  );
+                  
+                  return respond({
+                    success: true,
+                    pageId: page.id,
+                    filename: finalFilename,
+                    mode: 'text',
+                    contentLength: content.length,
+                    message: `File content embedded in Notion page: ${finalFilename}`
+                  });
+                } else {
+                  return respond({
+                    filename: finalFilename,
+                    content: content.slice(0, 500) + (content.length > 500 ? '...' : ''),
+                    fullLength: content.length,
+                    mode: 'text',
+                    note: 'Specify attachTo parameter to create a Notion page with this content'
+                  });
+                }
+              } else {
+                return error(`Text mode not supported for file type: ${fileExt}. Supported: .txt, .md, .json, .csv, .log`);
+              }
+            }
+            
+            case 'link': {
+              return respond({
+                filename: finalFilename,
+                fileSize: fileInfo.size,
+                mode: 'link',
+                limitation: 'Notion API limitation: Files must be hosted externally (e.g., Google Drive, Dropbox) before adding to Notion',
+                suggestion: 'Upload your file to a cloud service first, then use the URL with create_page or append_block_children tools',
+                message: `Cannot directly upload ${finalFilename} - external hosting required`
+              });
+            }
+            
+            default: // 'info' mode
+              return respond({
+                filename: finalFilename,
+                fileSize: fileInfo.size,
+                fileType: fileExt,
+                path: filePath,
+                lastModified: fileInfo.mtime,
+                mode: 'info',
+                availableModes: {
+                  text: 'Embed file content as text blocks (for .txt, .md, .json, .csv, .log)',
+                  link: 'Create file link (requires external hosting)',
+                  info: 'Show file information (current mode)'
+                },
+                limitation: 'Notion API does not support direct file uploads. Files must be hosted externally.',
+                message: `File analyzed: ${finalFilename} (${fileInfo.size} bytes)`
+              });
+          }
         } catch (error: any) {
-          return error(error.message || 'Failed to process file');
+          return error(`Failed to process file: ${error.message}`);
         }
       }
 

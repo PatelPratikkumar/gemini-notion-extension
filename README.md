@@ -1,17 +1,18 @@
-# 📝 Gemini CLI Notion Extension v3.0.2 Enhanced Edition
+# 📝 Gemini CLI Notion Extension v3.0.3 Enhanced Edition
 
 > Complete Notion workspace automation with [Gemini CLI](https://github.com/google-gemini/gemini-cli) via Model Context Protocol (MCP).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Gemini CLI](https://img.shields.io/badge/Gemini%20CLI-Extension-blue.svg)](https://github.com/google-gemini/gemini-cli)
-[![Version](https://img.shields.io/badge/Version-3.0.2-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
+[![Version](https://img.shields.io/badge/Version-3.0.3-brightgreen.svg)](https://github.com/PatelPratikkumar/gemini-notion-extension/releases)
 
 Transform your Notion workspace into a powerful automation hub with 46 comprehensive tools, file processing, database templates, and intelligent monitoring.
 
-## ✨ v3.0.2 Enhanced Features (Bug Fix Release)
+## ✨ v3.0.3 Enhanced Features (Bug Fix Release)
 
 - **🔧 Critical Fix**: MCP server registration for proper Gemini CLI tool discovery
+- **🐛 Fixed upload_file_to_notion**: Honest implementation with proper file handling modes
 - **🐛 Improved Error Handling**: Better database parent resolution for create_page function
 - **🚀 46 MCP Tools** (38 core + 8 enhanced) covering all Notion operations
 - **📄 File Processing** - Bulk upload, automated scanning, file monitoring
@@ -24,7 +25,7 @@ Transform your Notion workspace into a powerful automation hub with 46 comprehen
 - **🔐 Secure Storage** - Cross-platform credential management
 - **🎙️ Voice-Friendly** - Handles transcription errors gracefully
 
-### New in v3.0.2: Enhanced Tool Categories + Bug Fixes
+### New in v3.0.3: Enhanced Tool Categories + Bug Fixes
 
 | Category | Tools | Examples |
 |----------|-------|----------|
@@ -412,7 +413,7 @@ source ~/.bashrc  # Or ~/.zshrc
 ```bash
 # 1. Check extension status
 gemini extensions list
-# Should show: ✓ notion-extension v3.0.2
+# Should show: ✓ notion-extension v3.0.3
 
 # 2. Check MCP server status
 gemini mcp list

@@ -404,6 +404,41 @@ source ~/.bashrc  # Or ~/.zshrc
 | `Unauthorized` | Invalid/expired token | Get new token from Notion integrations |
 | `No databases found` | Pages not shared with integration | Share pages in Notion |
 
+### **MCP Server Path Resolution Issues**
+
+**Symptom**: MCP server fails to connect when using `~` (tilde) in file paths
+
+When configuring MCP servers in `~/.gemini/settings.json`, using `~` in the `args` path causes connection failures because **the tilde is not expanded to the home directory** when the parent process launches the child process.
+
+**Solution**: Use absolute paths instead of tilde (`~`) in the `args` field of `settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "node",
+      "args": ["/Users/yourname/.gemini/extensions/notion-extension/dist/bundle.js"],
+      "env": {
+        "NOTION_API_KEY": "ntn_your_actual_token"
+      }
+    }
+  }
+}
+```
+
+**To find your home directory path:**
+```bash
+# macOS/Linux
+echo $HOME
+# Output: /Users/yourname or /home/yourname
+
+# Windows PowerShell
+echo $env:USERPROFILE
+# Output: C:\Users\yourname
+```
+
+> ⚠️ **Important**: Replace `/Users/yourname/` with your actual home directory path from the command above.
+
 ---
 
 ## ✅ **Testing Your Installation**
@@ -693,6 +728,51 @@ cat package.json | grep version
   }
 }
 ```
+
+### Manual MCP Settings (`~/.gemini/settings.json`)
+
+If you prefer to configure the MCP server directly in your Gemini settings file instead of using `gemini mcp add`, edit `~/.gemini/settings.json`:
+
+> ⚠️ **Important**: Use **absolute paths**, not tilde (`~`). The tilde character is not expanded to the home directory when the parent process launches the child process, causing connection failures.
+
+**Correct configuration (with absolute path):**
+
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "node",
+      "args": ["/Users/yourname/.gemini/extensions/notion-extension/dist/bundle.js"],
+      "env": {
+        "NOTION_API_KEY": "ntn_your_actual_token"
+      }
+    }
+  }
+}
+```
+
+**Incorrect configuration (will fail):**
+
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "node",
+      "args": ["~/.gemini/extensions/notion-extension/dist/bundle.js"],
+      "env": {
+        "NOTION_API_KEY": "ntn_your_actual_token"
+      }
+    }
+  }
+}
+```
+
+**Finding your home directory:**
+- **macOS**: Run `echo $HOME` → `/Users/yourname`
+- **Linux**: Run `echo $HOME` → `/home/yourname`
+- **Windows**: Run `echo $env:USERPROFILE` → `C:\Users\yourname`
+
+Replace `/Users/yourname/` in the example with your actual path.
 
 ---
 
